@@ -10,12 +10,23 @@ if you want to view the source, please visit the github repository of this plugi
 `;
 
 const prod = (process.argv[2] === 'production');
+const test_build = (process.argv[2] === 'test' || process.argv[3] === 'test');
+
+let entry_point;
+let outfile;
+if (!test_build) {
+    entry_point = 'src/main.ts';
+    outfile = 'main.js';
+} else {
+    entry_point = 'tests/main.test.ts';
+    outfile = 'main.js'; // haven't found a way for obsidian to load main.test.js too
+}
 
 esbuild.build({
 	banner: {
 		js: banner,
 	},
-	entryPoints: ['main.ts'],
+	entryPoints: [entry_point],
 	bundle: true,
 	external: [
 		'obsidian',
@@ -51,5 +62,5 @@ esbuild.build({
 	logLevel: "info",
 	sourcemap: prod ? false : 'inline',
 	treeShaking: true,
-	outfile: 'main.js',
+	outfile: outfile,
 }).catch(() => process.exit(1));
