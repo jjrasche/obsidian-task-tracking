@@ -41,7 +41,7 @@ export default class TodoTrackingPlugin extends Plugin {
 	}
 
 	public async activateTodo(editor: Editor) {
-		activateTodo(editor);
+		activateTodo(editor, this.app);
 	}
 
 	onunload() {

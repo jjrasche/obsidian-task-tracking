@@ -1,25 +1,31 @@
-import { Editor, MarkdownView, Plugin, TAbstractFile, TFile, TFolder } from "obsidian";
+import { Editor, MarkdownView, Plugin, TAbstractFile, TFile, TFolder, View } from "obsidian";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import TodoTrackingPlugin from "main";
 import { cache_update, delay, PLUGIN_NAME, TARGET_FILE_NAME, DATA_FILE_NAME } from "./Util.test";
 import { ActivateToDoTests } from "./activate.test";
-import { ActivityData } from "model";
+import { ActivityData, Session } from "model";
+import { threadId } from "worker_threads";
 
 chai.use(chaiAsPromised);
 
 export default class TestTodoTrackingPlugin extends Plugin {
     tests: Array<{ name: string; fn: () => Promise<void> }>;
     plugin: TodoTrackingPlugin;
+    editor: Editor;
+    view: MarkdownView;
     data_file: TFile;
     target_file: TFile;
 
     async onload() {
-        this.run();
         this.addCommand({
             id: "run-todo-tracking-tests",
             name: "Run Todo Tracking Tests",
-            callback: async () => this.run(),
+            editorCallback: async (editor, view) => {
+                this.editor = editor;
+                this.view = view;
+                this.run();
+            },
         });
     }
 
@@ -33,16 +39,11 @@ export default class TestTodoTrackingPlugin extends Plugin {
     async setup() {
         await delay(300);
         this.tests = new Array();
-        // const tp = this.plugins.getPlugin(PLUGIN_NAME);
-        // this.plugin = tp.plugin
         this.plugin = this.plugins.getPlugin(PLUGIN_NAME);
-        try {
-            this.target_file = await this.app.vault.create(TARGET_FILE_NAME, "");
-            this.data_file = await this.app.vault.create(DATA_FILE_NAME, "");
-        } catch(e) {
-            this.target_file = this.findFile(TARGET_FILE_NAME);
-            this.data_file = this.findFile(DATA_FILE_NAME);
-        }
+        this.target_file = await this.createOrFindFile(TARGET_FILE_NAME);
+        this.data_file = await this.createOrFindFile(DATA_FILE_NAME);
+        await delay(300);
+        this.app.workspace.getLeaf().openFile(this.target_file);
         //await this.disable_external_plugins();
     }
 
@@ -71,7 +72,6 @@ export default class TestTodoTrackingPlugin extends Plugin {
     async load_tests() {
         // todo: load tests 
         await ActivateToDoTests(this);
-
     }
 
     test(name: string, fn: () => Promise<void>) {
@@ -90,7 +90,6 @@ export default class TestTodoTrackingPlugin extends Plugin {
         }
     }
 
-
     async modifyFile(fileName: string, file_content: string = "") {
         const f = this.findFile(fileName);
         if (f && f instanceof TFile) {
@@ -106,26 +105,35 @@ export default class TestTodoTrackingPlugin extends Plugin {
         return f;
     }
 
-    setCursorAndGetEditor(line: number = 0, column: number = 0) {
-        const editor = this.editor;
-        editor.setCursor(line, column);
+    async createOrFindFile(fileName: string): Promise<TFile> {
+        try {
+            return await this.app.vault.create(fileName, "");
+        } catch(e) {
+            return this.findFile(fileName);
+        }
     }
 
-    get view(): MarkdownView {
-        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (!view) {
-            throw Error("view is undefined");
-        }
-        return view;
-    }
+    // setCursorAndGetEditor(line: number = 0, column: number = 0): Editor {
+    //     const editor = this.editor;
+    //     editor.setCursor(line, column);
+    //     return editor;
+    // }
 
-    get editor(): Editor {
-        const editor = this.view.editor;
-        if (!editor) {
-            throw Error("editor is undefined");
-        }
-        return editor;
-    }
+    // get view(): MarkdownView {
+    //     const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    //     if (!view) {
+    //         throw Error("view is undefined");
+    //     }
+    //     return view;
+    // }
+
+    // get editor(): Editor {
+    //     const editor = this.view.editor;
+    //     if (!editor) {
+    //         throw Error("editor is undefined");
+    //     }
+    //     return editor;
+    // }
 
     get plugins(): any { 
         // @ts-ignore 
@@ -135,6 +143,11 @@ export default class TestTodoTrackingPlugin extends Plugin {
     async getData(): Promise<ActivityData> {
         const dataString = await this.readFile(this.data_file);
         const data = JSON.parse(dataString);
+        Object.keys(data).forEach(key => {
+            data[key].forEach((session: Session) => {
+                session.time = new Date(session.time);
+            });
+        });
         return data;
     }
 

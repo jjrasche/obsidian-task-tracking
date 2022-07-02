@@ -13,4 +13,4 @@ export enum SessionStatus {
 	complete	// the task is finished
 }
 
-export type ActivityData = {[key: number]: Session[]}[];
+export type ActivityData = {[key: string]: Session[]};

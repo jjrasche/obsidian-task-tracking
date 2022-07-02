@@ -1,5 +1,6 @@
 import { ActivityData, Session, SessionStatus } from "model";
-import { Editor, EditorPosition, Vault } from "obsidian";
+import { App, Editor, EditorPosition, TFile, Vault } from "obsidian";
+import { DATA_FILE_NAME, delay, TARGET_FILE_NAME } from "../tests/Util.test";
 
 const onlyOneActive = true;
 
@@ -7,13 +8,13 @@ export function getCurrentLine(editor: Editor): string {
 	return editor.getLine(editor.getCursor().line);
 }
 
-export function modifyCurrentLine(editor: Editor, changedLine: string) {
+export function replaceCurrentLine(editor: Editor, changedLine: string) {
 	const line = editor.getCursor().line;
-	editor.replaceRange(changedLine, {line, ch: 0} as EditorPosition)
+	editor.setLine(line, changedLine);
 } 
 
 export function lineIsTask(line: string): boolean {
-	return !!line.match(/\- \[.{1}\].{1]/g);
+	return !!line.match(/\- \[.{1}\].{1}/g);
 }
 
 export function getTaskID(line: string): number | null {
@@ -40,17 +41,25 @@ export function getTaskID(line: string): number | null {
 	- find task by taskID and mark active
 	* persist data
 */
-export async function activateTodo(editor: Editor) {
+export async function activateTodo(editor: Editor, app: App): Promise<number | null> {
 	const line = getCurrentLine(editor);
 	const isTask = lineIsTask(line);
 	let taskID = getTaskID(line);
 	if (!isTask) {
-		return false;
+		return null;
 	}
 	if (isTask && !taskID) {
 		taskID = addTaskIdToTask(editor, line);
 	}
-	const data = await getActivityData();
+	taskID = taskID as number;
+	const data = await getActivityData(app);
+	inactivateAllActiveTasks(data);
+	addActiveTodoSession(data, taskID);
+	await overwriteActivityData(app, data);
+	return taskID;
+}
+
+function inactivateAllActiveTasks(data: ActivityData) {
 	const activeTaskIds = getAllActiveTaskIDs(data);
 	if (!onlyOneActive) {
 		activeTaskIds.forEach(id => {
@@ -59,33 +68,69 @@ export async function activateTodo(editor: Editor) {
 	}
 }
 
+function addActiveTodoSession(data: ActivityData, taskID: number) {
+	const activeSession = {time: new Date(), status: SessionStatus.active} as Session;
+	if (!data[taskID]) {
+		data[taskID] = [activeSession];
+	} else {
+		data[taskID].push(activeSession);
+	}
+}
+
+
 function addTaskIdToTask(editor: Editor, line: string): number {
 	const split = line.split(/\- \[.{1}\] /);
-	const taskPrefix = split[0];
+	const taskPrefix = (line.match(/\- \[.{1}\] /)?? [])[0];
 	const taskMessage = split[1];
 	const taskID = (new Date()).getTime();
-	const modifiedLine = `${taskPrefix} ${taskID} ${taskMessage}`;
-	modifyCurrentLine(editor, modifiedLine);
+	const modifiedLine = `${taskPrefix}${taskID} ${taskMessage}`;
+	replaceCurrentLine(editor, modifiedLine);
 	return taskID;
 }
 
-async function getActivityData(): Promise<ActivityData> {
-	const path = "Scripts\\activity-data.json";
-	const vault = new Vault();
-	const file = vault.getFiles().find(f => f.path.contains(path));
-	if (!!file) {
-		const data = await vault.read(file);
-		return JSON.parse(data)
-	} else {
-		throw new Error(`could not find activity json in path ${path}`)
+function getActivityDataFile(): TFile {
+	// const fileName = "Scripts\\activity-data.json";
+	const fileName = DATA_FILE_NAME;
+	return findFile(fileName);
+}
+
+async function getActivityData(app: App): Promise<ActivityData> {
+	const data = await app.vault.read(getActivityDataFile());
+	return JSON.parse(data)
+}
+
+async function overwriteActivityData(app: App, data: ActivityData) {
+	const dataFile = getActivityDataFile();
+	const dataString = JSON.stringify(data);
+	const file = findFile(DATA_FILE_NAME);
+	await tryDeleteFile(app, file);
+	await app.vault.create(DATA_FILE_NAME, dataString);
+	await delay(300);
+}
+
+function findFile(fileName: string): TFile {
+	const f = this.app.vault.getFiles().find((f: TFile) => f.name === fileName);
+	if (!f) {
+		throw Error(`file ${fileName} not found.`);
+	}
+	return f;
+}
+
+async function tryDeleteFile(app: App, file: TFile): Promise<boolean> {
+	try {
+		await app.vault.delete(file);
+		return true;
+	} catch (e) {
+		return false;
 	}
 }
 
 function getAllActiveTaskIDs(data: ActivityData): number[] {
 	let activeTodos = [];
-	for (var i = 0; i < data.length; i++) {
-		const taskID = parseInt(Object.keys(data[i])[0]);
-		const sessions = data[i][taskID];
+	const todoKeys = Object.keys(data);
+	for (var i = 0; i < todoKeys.length; i++) {
+		const taskID = parseInt(todoKeys[i]);
+		const sessions = data[taskID];
 		const mostRecentSession = sessions[sessions.length - 1];
 		if (!!mostRecentSession) {
 			if (mostRecentSession.status == SessionStatus.active) {
