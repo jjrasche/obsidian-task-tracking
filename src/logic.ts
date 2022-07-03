@@ -1,5 +1,5 @@
 import { ActivityData, Session, SessionStatus } from "model";
-import { App, Editor, EditorPosition, TFile, Vault } from "obsidian";
+import { App, Editor, EditorPosition, MarkdownView, TFile, Vault } from "obsidian";
 import { DATA_FILE_NAME, delay, TARGET_FILE_NAME } from "../tests/Util.test";
 
 const onlyOneActive = true;
@@ -41,7 +41,7 @@ export function getTaskID(line: string): number | null {
 	- find task by taskID and mark active
 	* persist data
 */
-export async function activateTodo(editor: Editor, app: App): Promise<number | null> {
+export async function activateTask(editor: Editor, app: App): Promise<number | null> {
 	const line = getCurrentLine(editor);
 	const isTask = lineIsTask(line);
 	let taskID = getTaskID(line);
@@ -49,12 +49,12 @@ export async function activateTodo(editor: Editor, app: App): Promise<number | n
 		return null;
 	}
 	if (isTask && !taskID) {
-		taskID = addTaskIdToTask(editor, line);
+		taskID = await addTaskIdToTask(editor, line);
 	}
 	taskID = taskID as number;
 	const data = await getActivityData(app);
 	inactivateAllActiveTasks(data);
-	addActiveTodoSession(data, taskID);
+	addActiveTaskSession(data, taskID);
 	await overwriteActivityData(app, data);
 	return taskID;
 }
@@ -68,7 +68,7 @@ function inactivateAllActiveTasks(data: ActivityData) {
 	}
 }
 
-function addActiveTodoSession(data: ActivityData, taskID: number) {
+function addActiveTaskSession(data: ActivityData, taskID: number) {
 	const activeSession = {time: new Date(), status: SessionStatus.active} as Session;
 	if (!data[taskID]) {
 		data[taskID] = [activeSession];
@@ -78,13 +78,14 @@ function addActiveTodoSession(data: ActivityData, taskID: number) {
 }
 
 
-function addTaskIdToTask(editor: Editor, line: string): number {
+async function addTaskIdToTask(editor: Editor, line: string): Promise<number> {
 	const split = line.split(/\- \[.{1}\] /);
 	const taskPrefix = (line.match(/\- \[.{1}\] /)?? [])[0];
 	const taskMessage = split[1];
 	const taskID = (new Date()).getTime();
 	const modifiedLine = `${taskPrefix}${taskID} ${taskMessage}`;
 	replaceCurrentLine(editor, modifiedLine);
+	await app.workspace.getActiveViewOfType(MarkdownView)?.save()
 	return taskID;
 }
 
@@ -105,7 +106,7 @@ async function overwriteActivityData(app: App, data: ActivityData) {
 	const file = findFile(DATA_FILE_NAME);
 	await tryDeleteFile(app, file);
 	await app.vault.create(DATA_FILE_NAME, dataString);
-	await delay(300);
+	// await delay(300);
 }
 
 function findFile(fileName: string): TFile {
@@ -126,20 +127,20 @@ async function tryDeleteFile(app: App, file: TFile): Promise<boolean> {
 }
 
 function getAllActiveTaskIDs(data: ActivityData): number[] {
-	let activeTodos = [];
-	const todoKeys = Object.keys(data);
-	for (var i = 0; i < todoKeys.length; i++) {
-		const taskID = parseInt(todoKeys[i]);
+	let activeTasks = [];
+	const taskKeys = Object.keys(data);
+	for (var i = 0; i < taskKeys.length; i++) {
+		const taskID = parseInt(taskKeys[i]);
 		const sessions = data[taskID];
 		const mostRecentSession = sessions[sessions.length - 1];
 		if (!!mostRecentSession) {
 			if (mostRecentSession.status == SessionStatus.active) {
-				activeTodos.push(taskID);
+				activeTasks.push(taskID);
 				if (onlyOneActive) {
-					return activeTodos;
+					return activeTasks;
 				}
 			}
 		}
 	}
-	return activeTodos;
+	return activeTasks;
 }

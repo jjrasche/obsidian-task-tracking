@@ -1,4 +1,4 @@
-import { activateTodo } from 'logic';
+import { activateTask } from 'logic';
 import { Editor, MarkdownView, Plugin } from 'obsidian';
 // import * as l from "src/logic";
 
@@ -22,7 +22,7 @@ import { Editor, MarkdownView, Plugin } from 'obsidian';
 
 
 
-export default class TodoTrackingPlugin extends Plugin {
+export default class TaskTrackingPlugin extends Plugin {
 	onlyOneActive = true;
     public editor_handler: Editor;
 
@@ -40,8 +40,8 @@ export default class TodoTrackingPlugin extends Plugin {
 		// this.registerInterval(window.setInterval(() => conole.log('setInterval'), 5 * 60 * 1000)); // When registering intervals, this function will automatically clear the interval when the plugin is disabled.
 	}
 
-	public async activateTodo(editor: Editor) {
-		activateTodo(editor, this.app);
+	public async activateTask(editor: Editor) {
+		activateTask(editor, this.app);
 	}
 
 	onunload() {

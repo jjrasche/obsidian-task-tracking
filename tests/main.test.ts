@@ -12,21 +12,23 @@ chai.use(chaiAsPromised);
 export default class TestTodoTrackingPlugin extends Plugin {
     tests: Array<{ name: string; fn: () => Promise<void> }>;
     plugin: TodoTrackingPlugin;
-    editor: Editor;
-    view: MarkdownView;
+    // editor: Editor;
+    // view: MarkdownView;
     data_file: TFile;
     target_file: TFile;
 
     async onload() {
-        this.addCommand({
-            id: "run-todo-tracking-tests",
-            name: "Run Todo Tracking Tests",
-            editorCallback: async (editor, view) => {
-                this.editor = editor;
-                this.view = view;
-                this.run();
-            },
-        });
+        // this.addCommand({
+        //     id: "run-todo-tracking-tests",
+        //     name: "Run Todo Tracking Tests",
+        //     hotkeys: [{ modifiers: ["Mod", "Shift"], key: "r" }],
+        //     editorCallback: async (editor, view) => {
+        //         this.editor = editor;
+        //         this.view = view;
+        //         this.run();
+        //     },
+        // });
+        this.run()
     }
 
     async run() {
@@ -37,20 +39,18 @@ export default class TestTodoTrackingPlugin extends Plugin {
     }
 
     async setup() {
-        await delay(300);
+        // await delay(300);
         this.tests = new Array();
         this.plugin = this.plugins.getPlugin(PLUGIN_NAME);
         this.target_file = await this.createOrFindFile(TARGET_FILE_NAME);
         this.data_file = await this.createOrFindFile(DATA_FILE_NAME);
-        await delay(300);
-        this.app.workspace.getLeaf().openFile(this.target_file);
-        //await this.disable_external_plugins();
+        // await delay(300);
+        await this.app.workspace.getLeaf().openFile(this.target_file);
     }
 
     async teardown() {
         await this.app.vault.delete(this.target_file, true);
         await this.app.vault.delete(this.data_file, true);
-        //await this.enable_external_plugins();
     }
 
     async disable_external_plugins() {
@@ -119,21 +119,21 @@ export default class TestTodoTrackingPlugin extends Plugin {
     //     return editor;
     // }
 
-    // get view(): MarkdownView {
-    //     const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-    //     if (!view) {
-    //         throw Error("view is undefined");
-    //     }
-    //     return view;
-    // }
+    get view(): MarkdownView {
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!view) {
+            throw Error("view is undefined");
+        }
+        return view;
+    }
 
-    // get editor(): Editor {
-    //     const editor = this.view.editor;
-    //     if (!editor) {
-    //         throw Error("editor is undefined");
-    //     }
-    //     return editor;
-    // }
+    get editor(): Editor {
+        const editor = this.view.editor;
+        if (!editor) {
+            throw Error("editor is undefined");
+        }
+        return editor;
+    }
 
     get plugins(): any { 
         // @ts-ignore 
