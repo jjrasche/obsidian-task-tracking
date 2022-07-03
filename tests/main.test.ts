@@ -1,16 +1,18 @@
-import { Editor, MarkdownView, Plugin, TAbstractFile, TFile, TFolder, View } from "obsidian";
-import chai from "chai";
+import { Editor, MarkdownView, Plugin, TFile } from "obsidian";
+import { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import TaskTrackingPlugin from "main";
-import { cache_update, delay, PLUGIN_NAME, TARGET_FILE_NAME, DATA_FILE_NAME } from "./Util.test";
+import { TaskData, Session, SessionStatus } from "model";
+import { InactivateTaskTests } from "./inactivate.test";
 import { ActivateTaskTests } from "./activate.test";
-import { TaskData, Session } from "model";
-import { threadId } from "worker_threads";
 
-chai.use(chaiAsPromised);
+
+export const PLUGIN_NAME = "obsidian-activity-tracking";
+export const TARGET_FILE_NAME = "TargetFile.md";
+export const DATA_FILE_NAME = "DataFile.json";
 
 export default class TestTaskTrackingPlugin extends Plugin {
-    tests: Array<{ name: string; fn: () => Promise<void> }>;
+    tests: Array<{ name: string; suite?: string; fn: () => Promise<void> }>;
     plugin: TaskTrackingPlugin;
     data_file: TFile;
     target_file: TFile;
@@ -56,20 +58,26 @@ export default class TestTaskTrackingPlugin extends Plugin {
     }
 
     async load_tests() {
-        await ActivateTaskTests(this);
+        await this.loadTestSuite(ActivateTaskTests)
+        await this.loadTestSuite(InactivateTaskTests);
+    }
+
+    async loadTestSuite(loadSuite: Function) {
+        await loadSuite(this);
+        this.tests.filter(t => !t.suite).forEach(t => t.suite = loadSuite.name);
     }
 
     test(name: string, fn: () => Promise<void>) {
-        this.tests.push({ name, fn });
+        this.tests.push({ name, fn })
     }
 
     async run_tests() {
-        for (let t of this.tests) {
+        for (let test of this.tests) {
             try {
-                await t.fn();
-                console.log("✅", t.name);
+                await test.fn();
+                console.log(`✅ ${test.suite}: ${test.name}`);
             } catch (e) {
-                console.log("❌", t.name);
+                console.log(`❌ ${test.suite}: ${test.name}`);
                 console.error(e);
             }
         }
@@ -97,12 +105,6 @@ export default class TestTaskTrackingPlugin extends Plugin {
             return this.findFile(fileName);
         }
     }
-
-    // setCursorAndGetEditor(line: number = 0, column: number = 0): Editor {
-    //     const editor = this.editor;
-    //     editor.setCursor(line, column);
-    //     return editor;
-    // }
 
     get view(): MarkdownView {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
@@ -138,5 +140,42 @@ export default class TestTaskTrackingPlugin extends Plugin {
 
     async readFile(file: TFile): Promise<string> {
         return this.app.vault.read(file);
+    }
+
+    /*
+        shared methods used across test suites
+    */
+    async setupTest(fileContent: string, intialData = {}, line = 0) {
+        await this.modifyFile(TARGET_FILE_NAME, fileContent);
+        await this.modifyFile(DATA_FILE_NAME, JSON.stringify(intialData));
+        this.editor.setCursor(line);
+    }
+    
+    async expectTaskInData(initialData: {}, taskID: number, expectedNumTasks = 1, expecteNumSessions = 1, expectedMostRecentSessionStatus = SessionStatus.active) {
+        const data = await this.getData();
+        const mostRecentSession = (data[taskID].last() ?? {}) as Session;
+        expect(Object.keys(data)).to.have.lengthOf(expectedNumTasks);               // 1 task
+        expect(data[taskID]).to.not.be.null;                                        // taskID exists in data
+        expect(data[taskID]).to.have.lengthOf(expecteNumSessions);                  // task has 1 session
+        expect(mostRecentSession.status).to.eql(expectedMostRecentSessionStatus);   // session has active status
+        expect(mostRecentSession.time)
+            .lessThan(new Date())
+            .greaterThan(new Date((new Date()).setSeconds(-10)));                   // session has active status
+        data[taskID].pop();
+        if (data[taskID].length === 0) {
+            delete data[taskID];
+        }
+        expect(JSON.stringify(data)).to.eql(JSON.stringify(initialData))            // only 1 session added
+    }
+    
+    async expectTargetFile(expectedFileContent: string) {
+        const targetFile = await this.readFile(this.target_file);
+        expect(targetFile).to.eql(expectedFileContent);     // taskID added to selected task
+    }
+    
+    async expectNoChanges(fileContent: string, initialData = {}) {
+        const data = await this.getData();
+        await expect(JSON.stringify(data)).to.eql(JSON.stringify(initialData));  // data file unchanged
+        expect(await this.readFile(this.target_file)).to.eql(fileContent); // target file unchanged
     }
 }

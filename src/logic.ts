@@ -1,7 +1,7 @@
 import { assert } from "console";
 import { TaskData, Session, SessionStatus } from "model";
 import { App, Editor, EditorPosition, MarkdownView, TFile, Vault } from "obsidian";
-import { DATA_FILE_NAME, delay, TARGET_FILE_NAME } from "../tests/Util.test";
+import { DATA_FILE_NAME } from "../tests/main.test";
 
 const onlyOneActive = true;
 const notATask = -1;
@@ -95,13 +95,15 @@ function inactivateAllActiveTasks(data: TaskData) {
 
 function addTaskSession(data: TaskData, taskID: number, status: SessionStatus) {
 	const session = {time: new Date(), status} as Session;
+	// do not add the same status as current status
+	if (!!data[taskID] && data[taskID].last()?.status === status) {
+		return;
+	}
 	if (!data[taskID]) {
 		assert(status === SessionStatus.active);
 		data[taskID] = [session];
 	} else {
-		if (data[taskID].last()?.status !== SessionStatus.active) {
-			data[taskID].push(session);
-		}
+		data[taskID].push(session);
 	}
 }
 
@@ -130,10 +132,9 @@ async function getActivityData(app: App): Promise<TaskData> {
 async function overwriteActivityData(app: App, data: TaskData) {
 	const dataFile = getActivityDataFile();
 	const dataString = JSON.stringify(data);
-	const file = findFile(DATA_FILE_NAME);
+	const file = findFile(DATA_FILE_NAME);  // todo: push these to a settings object
 	await tryDeleteFile(app, file);
 	await app.vault.create(DATA_FILE_NAME, dataString);
-	// await delay(300);
 }
 
 function findFile(fileName: string): TFile {
