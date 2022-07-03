@@ -23,7 +23,6 @@ import { Editor, MarkdownView, Plugin } from 'obsidian';
 
 
 export default class TaskTrackingPlugin extends Plugin {
-	onlyOneActive = true;
     public editor_handler: Editor;
 
 	async onload() {

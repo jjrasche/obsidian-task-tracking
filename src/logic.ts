@@ -1,14 +1,17 @@
+import { assert } from "console";
 import { TaskData, Session, SessionStatus } from "model";
 import { App, Editor, EditorPosition, MarkdownView, TFile, Vault } from "obsidian";
 import { DATA_FILE_NAME, delay, TARGET_FILE_NAME } from "../tests/Util.test";
 
 const onlyOneActive = true;
+const notATask = -1;
+const noTaskID = -2;
 
 export function getCurrentLine(editor: Editor): string {
 	return editor.getLine(editor.getCursor().line);
 }
 
-export function replaceCurrentLine(editor: Editor, changedLine: string) {
+export function replaceCurrentText(editor: Editor, changedLine: string) {
 	const line = editor.getCursor().line;
 	editor.setLine(line, changedLine);
 } 
@@ -17,18 +20,29 @@ export function lineIsTask(line: string): boolean {
 	return !!line.match(/\- \[.{1}\].{1}/g);
 }
 
-export function getTaskID(line: string): number | null {
-	const matches = line.match(/\- \[.{1}\] [0-9]+\s/g);
+interface taskLine {
+	isTask: boolean;
+	taskID: number;
+	text: string;
+}
+
+export function getTaskLine(editor: Editor): taskLine {
+	const text = getCurrentLine(editor);
+	const isTask = lineIsTask(text);
+	if (!isTask) {
+		return { isTask: false } as taskLine;
+	}
+	const matches = text.match(/\- \[.{1}\] [0-9]+\s/g);
 	if (!!matches) {
 		if (matches.length > 1) {
 			throw new Error("found more than 1 task on this line");
 		}
 		const match = (matches[0].match(/[0-9]+/) ?? [])[0];
 		try {
-			return parseInt(match);
+			return { taskID: parseInt(match), text } as taskLine;
 		} catch(e){}
 	}
-	return null;
+	return { text } as taskLine;
 }
 
 /*
@@ -42,22 +56,33 @@ export function getTaskID(line: string): number | null {
 	* persist data
 */
 export async function activateTask(editor: Editor, app: App): Promise<number | null> {
-	const line = getCurrentLine(editor);
-	const isTask = lineIsTask(line);
-	let taskID = getTaskID(line);
-	if (!isTask) {
+	let line = getTaskLine(editor);
+	if (line.isTask === false) {
 		return null;
 	}
-	if (isTask && !taskID) {
-		taskID = await addTaskIdToTask(editor, line);
+	if (!line.taskID) {
+		line.taskID = await addTaskIdToTask(editor, line.text);
 	}
-	taskID = taskID as number;
 	const data = await getActivityData(app);
 	inactivateAllActiveTasks(data);
-	addActiveTaskSession(data, taskID);
+	addTaskSession(data, line.taskID, SessionStatus.active);
 	await overwriteActivityData(app, data);
-	return taskID;
+	return line.taskID;
 }
+
+
+export async function inactivateTask(editor: Editor, app: App): Promise<number | null> {
+	let line = getTaskLine(editor);
+	if (line.isTask === false || !line.taskID) {
+		return null;
+	}
+	const data = await getActivityData(app);
+	inactivateAllActiveTasks(data);
+	addTaskSession(data, line.taskID, SessionStatus.inactive);
+	await overwriteActivityData(app, data);
+	return line.taskID;
+}
+
 
 function inactivateAllActiveTasks(data: TaskData) {
 	const activeTaskIds = getAllActiveTaskIDs(data);
@@ -68,23 +93,25 @@ function inactivateAllActiveTasks(data: TaskData) {
 	}
 }
 
-function addActiveTaskSession(data: TaskData, taskID: number) {
-	const activeSession = {time: new Date(), status: SessionStatus.active} as Session;
+function addTaskSession(data: TaskData, taskID: number, status: SessionStatus) {
+	const session = {time: new Date(), status} as Session;
 	if (!data[taskID]) {
-		data[taskID] = [activeSession];
+		assert(status === SessionStatus.active);
+		data[taskID] = [session];
 	} else {
-		data[taskID].push(activeSession);
+		if (data[taskID].last()?.status !== SessionStatus.active) {
+			data[taskID].push(session);
+		}
 	}
 }
 
-
-async function addTaskIdToTask(editor: Editor, line: string): Promise<number> {
-	const split = line.split(/\- \[.{1}\] /);
-	const taskPrefix = (line.match(/\- \[.{1}\] /)?? [])[0];
+async function addTaskIdToTask(editor: Editor, text: string): Promise<number> {
+	const split = text.split(/\- \[.{1}\] /);
+	const taskPrefix = (text.match(/\- \[.{1}\] /)?? [])[0];
 	const taskMessage = split[1];
 	const taskID = (new Date()).getTime();
-	const modifiedLine = `${taskPrefix}${taskID} ${taskMessage}`;
-	replaceCurrentLine(editor, modifiedLine);
+	const modifiedText = `${taskPrefix}${taskID} ${taskMessage}`;
+	replaceCurrentText(editor, modifiedText);
 	await app.workspace.getActiveViewOfType(MarkdownView)?.save()
 	return taskID;
 }
