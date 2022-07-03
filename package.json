@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-activity-tracking",
+	"name": "obsidian-task-tracking",
 	"version": "0.0.1",
-	"description": "Obsidian plugin storing data related to time actively spent on todos, offering hotkey access to mark current task active",
+	"description": "Obsidian plugin storing data related to time actively spent on tasks, offering hotkey access to mark current task active",
 	"main": "main.js",
 	"scripts": {
 		"test": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs test",

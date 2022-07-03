@@ -1,10 +1,10 @@
 {
-	"id": "obsidian-activity-tracking",
-	"name": "Activity Tracking",
+	"id": "obsidian-task-tracking",
+	"name": "Task Tracking",
 	"version": "0.0.1",
 	"minAppVersion": "0.1.0",
-	"description": "Obsidian plugin storing data related to time actively spent on todos, offering hotkey access to mark current task active",
+	"description": "Obsidian plugin storing data related to time actively spent on tasks, offering hotkey access to mark current task active",
 	"author": "Jim Rasche",
-	"authorUrl": "https://github.com/jjrasche/obsidian-activity-tracking",
+	"authorUrl": "https://github.com/jjrasche/obsidian-task-tracking",
 	"isDesktopOnly": false
 }

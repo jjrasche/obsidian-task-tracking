@@ -1,4 +1,4 @@
-import { ActivityData, Session, SessionStatus } from "model";
+import { TaskData, Session, SessionStatus } from "model";
 import { App, Editor, EditorPosition, MarkdownView, TFile, Vault } from "obsidian";
 import { DATA_FILE_NAME, delay, TARGET_FILE_NAME } from "../tests/Util.test";
 
@@ -59,7 +59,7 @@ export async function activateTask(editor: Editor, app: App): Promise<number | n
 	return taskID;
 }
 
-function inactivateAllActiveTasks(data: ActivityData) {
+function inactivateAllActiveTasks(data: TaskData) {
 	const activeTaskIds = getAllActiveTaskIDs(data);
 	if (!onlyOneActive) {
 		activeTaskIds.forEach(id => {
@@ -68,7 +68,7 @@ function inactivateAllActiveTasks(data: ActivityData) {
 	}
 }
 
-function addActiveTaskSession(data: ActivityData, taskID: number) {
+function addActiveTaskSession(data: TaskData, taskID: number) {
 	const activeSession = {time: new Date(), status: SessionStatus.active} as Session;
 	if (!data[taskID]) {
 		data[taskID] = [activeSession];
@@ -95,12 +95,12 @@ function getActivityDataFile(): TFile {
 	return findFile(fileName);
 }
 
-async function getActivityData(app: App): Promise<ActivityData> {
+async function getActivityData(app: App): Promise<TaskData> {
 	const data = await app.vault.read(getActivityDataFile());
 	return JSON.parse(data)
 }
 
-async function overwriteActivityData(app: App, data: ActivityData) {
+async function overwriteActivityData(app: App, data: TaskData) {
 	const dataFile = getActivityDataFile();
 	const dataString = JSON.stringify(data);
 	const file = findFile(DATA_FILE_NAME);
@@ -126,7 +126,7 @@ async function tryDeleteFile(app: App, file: TFile): Promise<boolean> {
 	}
 }
 
-function getAllActiveTaskIDs(data: ActivityData): number[] {
+function getAllActiveTaskIDs(data: TaskData): number[] {
 	let activeTasks = [];
 	const taskKeys = Object.keys(data);
 	for (var i = 0; i < taskKeys.length; i++) {

@@ -1,5 +1,5 @@
 /*
-	A session describes a period of time spent on a todo
+	A session describes a period of time spent on a task
 */
 export class Session {
 	time: Date;
@@ -13,4 +13,4 @@ export enum SessionStatus {
 	complete	// the task is finished
 }
 
-export type ActivityData = {[key: string]: Session[]};
+export type TaskData = {[key: string]: Session[]};

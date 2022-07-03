@@ -1,33 +1,21 @@
 import { Editor, MarkdownView, Plugin, TAbstractFile, TFile, TFolder, View } from "obsidian";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-import TodoTrackingPlugin from "main";
+import TaskTrackingPlugin from "main";
 import { cache_update, delay, PLUGIN_NAME, TARGET_FILE_NAME, DATA_FILE_NAME } from "./Util.test";
-import { ActivateToDoTests } from "./activate.test";
-import { ActivityData, Session } from "model";
+import { ActivateTaskTests } from "./activate.test";
+import { TaskData, Session } from "model";
 import { threadId } from "worker_threads";
 
 chai.use(chaiAsPromised);
 
-export default class TestTodoTrackingPlugin extends Plugin {
+export default class TestTaskTrackingPlugin extends Plugin {
     tests: Array<{ name: string; fn: () => Promise<void> }>;
-    plugin: TodoTrackingPlugin;
-    // editor: Editor;
-    // view: MarkdownView;
+    plugin: TaskTrackingPlugin;
     data_file: TFile;
     target_file: TFile;
 
     async onload() {
-        // this.addCommand({
-        //     id: "run-todo-tracking-tests",
-        //     name: "Run Todo Tracking Tests",
-        //     hotkeys: [{ modifiers: ["Mod", "Shift"], key: "r" }],
-        //     editorCallback: async (editor, view) => {
-        //         this.editor = editor;
-        //         this.view = view;
-        //         this.run();
-        //     },
-        // });
         this.run()
     }
 
@@ -39,13 +27,11 @@ export default class TestTodoTrackingPlugin extends Plugin {
     }
 
     async setup() {
-        // await delay(300);
         this.tests = new Array();
         this.plugin = this.plugins.getPlugin(PLUGIN_NAME);
         this.target_file = await this.createOrFindFile(TARGET_FILE_NAME);
         this.data_file = await this.createOrFindFile(DATA_FILE_NAME);
-        // await delay(300);
-        await this.app.workspace.getLeaf().openFile(this.target_file);
+        await this.app.workspace.getLeaf().openFile(this.target_file);  // duplicates the use case of interacting with a file in editor
     }
 
     async teardown() {
@@ -70,8 +56,7 @@ export default class TestTodoTrackingPlugin extends Plugin {
     }
 
     async load_tests() {
-        // todo: load tests 
-        await ActivateToDoTests(this);
+        await ActivateTaskTests(this);
     }
 
     test(name: string, fn: () => Promise<void>) {
@@ -140,7 +125,7 @@ export default class TestTodoTrackingPlugin extends Plugin {
         return this.app.plugins
     }
 
-    async getData(): Promise<ActivityData> {
+    async getData(): Promise<TaskData> {
         const dataString = await this.readFile(this.data_file);
         const data = JSON.parse(dataString);
         Object.keys(data).forEach(key => {

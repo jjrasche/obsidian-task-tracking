@@ -2,10 +2,10 @@ import TestTaskTrackingPlugin from "./main.test";
 import { DATA_FILE_NAME, delay, TARGET_FILE_NAME } from "./Util.test";
 import { expect } from "chai";
 import { activateTask } from "logic";
-import { ActivityData, Session, SessionStatus } from "model";
+import { TaskData, Session, SessionStatus } from "model";
 import { MarkdownView } from "obsidian";
 
-export function ActivateToDoTests(t: TestTaskTrackingPlugin) {
+export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
     t.test("data validation: if current line is not a task, should not change task or data", async () => {
         // arrange
         const fileContent = "not a task, just a line";
