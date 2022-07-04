@@ -1,6 +1,7 @@
-import { activateTask } from 'logic';
+import { changeTask } from 'logic';
+import { SessionStatus } from 'model/session-status';
 import { Editor, MarkdownView, Plugin } from 'obsidian';
-// import * as l from "src/logic";
+import { DEFAULT_SETTINGS, Settings } from 'settings';
 
 /*
 	functionality:
@@ -24,14 +25,19 @@ import { Editor, MarkdownView, Plugin } from 'obsidian';
 
 export default class TaskTrackingPlugin extends Plugin {
     public editor_handler: Editor;
+    public settings: Settings;
 
 	async onload() {
+		await this.load_settings();
+
 		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCheckCallback: (check: boolean, editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
+			id: 'activate-task-command',
+			name: 'Activate Task',
+			editorCheckCallback:  (check: boolean, editor: Editor) => {
+				if (!!check) {
+					return !!editor;
+				}
+				changeTask(this.app, editor, this.settings, SessionStatus.active);
 			}
 		});
 		// this.addRibbonIcon('up-arrow-with-tail', 'Activity Tracker Plugin', (evt: MouseEvent) => {});
@@ -39,12 +45,15 @@ export default class TaskTrackingPlugin extends Plugin {
 		// this.registerInterval(window.setInterval(() => conole.log('setInterval'), 5 * 60 * 1000)); // When registering intervals, this function will automatically clear the interval when the plugin is disabled.
 	}
 
-	public async activateTask(editor: Editor) {
-		activateTask(editor, this.app);
-	}
-
 	onunload() {
-
 	}
+
+	async save_settings(): Promise<void> {
+        await this.saveData(this.settings);
+    }
+
+    async load_settings(): Promise<void> {
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    }
 }
 

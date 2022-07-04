@@ -1,25 +1,41 @@
 import { Editor, MarkdownView, Plugin, TFile } from "obsidian";
 import { expect } from "chai";
-import chaiAsPromised from "chai-as-promised";
 import TaskTrackingPlugin from "main";
-import { TaskData, Session, SessionStatus } from "model";
+import { Session } from "model/session";
 import { InactivateTaskTests } from "./inactivate.test";
 import { ActivateTaskTests } from "./activate.test";
 import { CompleteTaskTests } from "./complete.test";
+import { TaskDataType } from "model/task-data";
+import { SessionStatus } from "model/session-status";
+import { DEFAULT_SETTINGS, Settings } from "settings";
+import { TaskLineTests } from "./taskline.test";
+import { FileService } from "file.service";
 
 
-export const PLUGIN_NAME = "obsidian-activity-tracking";
+export const PLUGIN_NAME = "obsidian-task-tracking";
 export const TARGET_FILE_NAME = "TargetFile.md";
 export const DATA_FILE_NAME = "DataFile.json";
 
+/*
+    left off: with fixing test cases after resorting to importing settings in test
+*/
+
 export default class TestTaskTrackingPlugin extends Plugin {
     tests: Array<{ name: string; suite?: string; fn: () => Promise<void> }>;
-    plugin: TaskTrackingPlugin;
+    // plugin: TaskTrackingPlugin;
+    settings: Settings;
     data_file: TFile;
     target_file: TFile;
+    file: FileService = new FileService(this.app);
+
+    // todo: try to code around this limitaiotn
+    async load_settings(): Promise<void> {
+        this.settings = Object.assign({}, DEFAULT_SETTINGS);
+    }
 
     async onload() {
-        this.run()
+        await this.load_settings();
+        this.run();
     }
 
     async run() {
@@ -31,10 +47,12 @@ export default class TestTaskTrackingPlugin extends Plugin {
 
     async setup() {
         this.tests = new Array();
-        this.plugin = this.plugins.getPlugin(PLUGIN_NAME);
-        this.target_file = await this.createOrFindFile(TARGET_FILE_NAME);
-        this.data_file = await this.createOrFindFile(DATA_FILE_NAME);
-        await this.app.workspace.getLeaf().openFile(this.target_file);  // duplicates the use case of interacting with a file in editor
+        // todo: the plugin is TestTaskTrackingPlugin not TaskTrackingPlugin. so don't have access to the actual plugins settings
+        // this.plugin = this.plugins.getPlugin(PLUGIN_NAME);
+        this.target_file = await this.file.createOrFind(TARGET_FILE_NAME);
+        this.data_file = await this.file.createOrFind(DATA_FILE_NAME);
+        this.settings.taskDataFileName = DATA_FILE_NAME;
+        await this.app.workspace.getLeaf().openFile(this.target_file);  // replicates the use case of interacting with a file in editor
     }
 
     async teardown() {
@@ -62,6 +80,7 @@ export default class TestTaskTrackingPlugin extends Plugin {
         await this.loadTestSuite(ActivateTaskTests)
         await this.loadTestSuite(InactivateTaskTests);
         await this.loadTestSuite(CompleteTaskTests);
+        await this.loadTestSuite(TaskLineTests);
         const focusedTests = this.tests.filter(t => t.name.startsWith("fff"));
         if (focusedTests.length > 0) {
             this.tests = focusedTests;
@@ -89,29 +108,6 @@ export default class TestTaskTrackingPlugin extends Plugin {
         }
     }
 
-    async modifyFile(fileName: string, file_content: string = "") {
-        const f = this.findFile(fileName);
-        if (f && f instanceof TFile) {
-            await this.app.vault.modify(f, file_content);
-        }
-    }
-
-    findFile(fileName: string): TFile {
-        const f = this.app.vault.getFiles().find(f => f.name === fileName);
-        if (!f) {
-            throw Error(`file ${fileName} not found.`);
-        }
-        return f;
-    }
-
-    async createOrFindFile(fileName: string): Promise<TFile> {
-        try {
-            return await this.app.vault.create(fileName, "");
-        } catch(e) {
-            return this.findFile(fileName);
-        }
-    }
-
     get view(): MarkdownView {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (!view) {
@@ -133,8 +129,8 @@ export default class TestTaskTrackingPlugin extends Plugin {
         return this.app.plugins
     }
 
-    async getData(): Promise<TaskData> {
-        const dataString = await this.readFile(this.data_file);
+    async getData(): Promise<TaskDataType> {
+        const dataString = await this.file.read(this.data_file);
         const data = JSON.parse(dataString);
         Object.keys(data).forEach(key => {
             data[key].forEach((session: Session) => {
@@ -144,16 +140,12 @@ export default class TestTaskTrackingPlugin extends Plugin {
         return data;
     }
 
-    async readFile(file: TFile): Promise<string> {
-        return this.app.vault.read(file);
-    }
-
     /*
         shared methods used across test suites
     */
     async setupTest(fileContent: string, intialData = {}, line = 0) {
-        await this.modifyFile(TARGET_FILE_NAME, fileContent);
-        await this.modifyFile(DATA_FILE_NAME, JSON.stringify(intialData));
+        await this.file.modify(TARGET_FILE_NAME, fileContent);
+        await this.file.modify(DATA_FILE_NAME, JSON.stringify(intialData));
         this.editor.setCursor(line);
     }
     
@@ -175,13 +167,13 @@ export default class TestTaskTrackingPlugin extends Plugin {
     }
     
     async expectTargetFile(expectedFileContent: string) {
-        const targetFile = await this.readFile(this.target_file);
+        const targetFile = await this.file.read(this.target_file);
         expect(targetFile).to.eql(expectedFileContent);     // taskID added to selected task
     }
     
     async expectNoChanges(fileContent: string, initialData = {}) {
         const data = await this.getData();
-        await expect(JSON.stringify(data)).to.eql(JSON.stringify(initialData));  // data file unchanged
-        expect(await this.readFile(this.target_file)).to.eql(fileContent) // target file unchanged
+        await expect(JSON.stringify(data)).to.eql(JSON.stringify(initialData));  // data file unchanged 
+        expect(await this.file.read(this.target_file)).to.eql(fileContent) // target file unchanged
     }
 }
