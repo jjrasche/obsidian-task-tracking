@@ -1,7 +1,7 @@
 import TestTaskTrackingPlugin from "./main.test";
 import { expect } from "chai";
-import { activateTask } from "logic";
-import { Session, SessionStatus } from "model";
+import { changeTask } from "logic";
+import { SessionStatus } from "model";
 
 export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
     t.test("if current line is not a task, should not change task or data", async () => {
@@ -10,9 +10,9 @@ export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
         const initialData = {};
         await t.setupTest(fileContent, initialData);
         // act
-        const actualTaskID = await activateTask(t.editor, t.app) as number;
+        const actualTaskID = await changeTask(t.editor, t.app, SessionStatus.active) as number;
         // assert
-        expect(actualTaskID).to.be.null;
+        expect(actualTaskID).to.be.undefined;
         await t.expectNoChanges(fileContent, initialData);
     });
 
@@ -23,7 +23,7 @@ export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
         const initialData = {[taskID]: [{time: new Date(), status: SessionStatus.active}]};
         await t.setupTest(fileContent, initialData);
         // act
-        const actualTaskID = await activateTask(t.editor, t.app) as number;
+        const actualTaskID = await changeTask(t.editor, t.app, SessionStatus.active) as number;
         // assert
         expect(actualTaskID).to.be.eql(taskID);
         await t.expectNoChanges(fileContent, initialData);
@@ -35,7 +35,7 @@ export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
         const initialData = {};
         await t.setupTest(fileContent, initialData);
         // act
-        const taskID = await activateTask(t.editor, t.app) as number;
+        const taskID = await changeTask(t.editor, t.app, SessionStatus.active) as number;
         // assert
         await t.expectTaskInData(initialData, taskID);
         await t.expectTargetFile(`- [ ] ${taskID} I am a task without an ID`);
@@ -48,7 +48,7 @@ export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
         const initialData = {[taskID]: [{time: new Date(), status: SessionStatus.inactive}]};
         await t.setupTest(fileContent, initialData);
         // act
-        const actualTaskID = await activateTask(t.editor, t.app) as number;
+        const actualTaskID = await changeTask(t.editor, t.app, SessionStatus.active) as number;
         // assert
         expect(actualTaskID).to.eql(taskID);
         await t.expectTaskInData(initialData, taskID, 1, 2, SessionStatus.active);
@@ -62,7 +62,7 @@ export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
         const initialData = {[taskID]: [{time: new Date(), status: SessionStatus.complete}]};
         await t.setupTest(fileContent, initialData);
         // act
-        const actualTaskID = await activateTask(t.editor, t.app) as number;
+        const actualTaskID = await changeTask(t.editor, t.app, SessionStatus.active) as number;
         // assert
         expect(actualTaskID).to.eql(taskID);
         await t.expectTaskInData(initialData, taskID, 1, 2, SessionStatus.active);
@@ -80,7 +80,7 @@ export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
         };
         await t.setupTest(fileContent, initialData, 1);
         // act
-        const actualTaskID = await activateTask(t.editor, t.app) as number;
+        const actualTaskID = await changeTask(t.editor, t.app, SessionStatus.active) as number;
         // assert
         expect(actualTaskID).to.eql(task2ID);
         await t.expectTaskInData(initialData, task2ID, 2, 2, SessionStatus.active);
@@ -91,7 +91,7 @@ export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
     //     // arrange
     //     await t.setupTest("- [ ] I am a task without an ID");
     //     // act
-    //     const taskID = await activateTask(t.editor, t.app) as number;
+    //     const taskID = await changeTask(t.editor, t.app, SessionStatus.active) as number;
     //     // assert
     //     await t.expectTaskInData(taskID);
     //     await t.expectTargetFile(`- [ ] ${taskID} I am a task without an ID`);

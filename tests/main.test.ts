@@ -5,6 +5,7 @@ import TaskTrackingPlugin from "main";
 import { TaskData, Session, SessionStatus } from "model";
 import { InactivateTaskTests } from "./inactivate.test";
 import { ActivateTaskTests } from "./activate.test";
+import { CompleteTaskTests } from "./complete.test";
 
 
 export const PLUGIN_NAME = "obsidian-activity-tracking";
@@ -60,6 +61,11 @@ export default class TestTaskTrackingPlugin extends Plugin {
     async load_tests() {
         await this.loadTestSuite(ActivateTaskTests)
         await this.loadTestSuite(InactivateTaskTests);
+        await this.loadTestSuite(CompleteTaskTests);
+        const focusedTests = this.tests.filter(t => t.name.startsWith("fff"));
+        if (focusedTests.length > 0) {
+            this.tests = focusedTests;
+        }
     }
 
     async loadTestSuite(loadSuite: Function) {
@@ -176,6 +182,6 @@ export default class TestTaskTrackingPlugin extends Plugin {
     async expectNoChanges(fileContent: string, initialData = {}) {
         const data = await this.getData();
         await expect(JSON.stringify(data)).to.eql(JSON.stringify(initialData));  // data file unchanged
-        expect(await this.readFile(this.target_file)).to.eql(fileContent); // target file unchanged
+        expect(await this.readFile(this.target_file)).to.eql(fileContent) // target file unchanged
     }
 }

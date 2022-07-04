@@ -20,29 +20,47 @@ export function lineIsTask(line: string): boolean {
 	return !!line.match(/\- \[.{1}\].{1}/g);
 }
 
-interface taskLine {
-	isTask: boolean;
-	taskID: number;
-	text: string;
+class TaskLine {
+	constructor(
+		public fullLine: string,
+		public isTask: boolean,
+		public prefix?: string,
+		public taskID?: number,
+		public text?: string) {}
+	
+	public toString(): string {
+		return `${this.prefix} ${this.taskID} ${this.text?.trim()}`;
+	}
 }
 
-export function getTaskLine(editor: Editor): taskLine {
-	const text = getCurrentLine(editor);
-	const isTask = lineIsTask(text);
+export function getTaskLine(editor: Editor): TaskLine {
+	const fullLine = getCurrentLine(editor);
+	const prefixMatch = fullLine.match(/^- \[.{1}\]\s/g); // begins with "- [ ] "
+	const isTask = !!prefixMatch;
 	if (!isTask) {
-		return { isTask: false } as taskLine;
+		return new TaskLine(fullLine, false);
 	}
-	const matches = text.match(/\- \[.{1}\] [0-9]+\s/g);
-	if (!!matches) {
-		if (matches.length > 1) {
-			throw new Error("found more than 1 task on this line");
-		}
-		const match = (matches[0].match(/[0-9]+/) ?? [])[0];
-		try {
-			return { taskID: parseInt(match), text } as taskLine;
-		} catch(e){}
+	if (prefixMatch.length > 1) {
+		throw new Error("found more than 1 task on this line");
 	}
-	return { text } as taskLine;
+	const prefix = prefixMatch[0].trim();
+	const taskID = getTaskID(fullLine);
+	const text = getTaskText(fullLine);
+	if (!!text) {
+		text.trim();
+	}
+	return new TaskLine(fullLine, isTask, prefix, taskID, text);
+}
+
+function getTaskID(line: string): number {
+	const startTaskMatch = line.match(/^- \[.{1}\]\s[0-9]+/g);
+	const taskID = ((startTaskMatch ?? [""])[0].match(/[0-9]+/) ?? [])[0];
+	return parseInt(taskID);
+}
+
+function getTaskText(line: string): string {
+	const startTaskMatch = line.split(/^- \[.{1}\]\s[0-9]*/g);
+	return startTaskMatch[1];
 }
 
 /*
@@ -55,34 +73,28 @@ export function getTaskLine(editor: Editor): taskLine {
 	- find task by taskID and mark active
 	* persist data
 */
-export async function activateTask(editor: Editor, app: App): Promise<number | null> {
+export async function changeTask(editor: Editor, app: App, status: SessionStatus): Promise<number | undefined> {
 	let line = getTaskLine(editor);
-	if (line.isTask === false) {
-		return null;
+	if (line.isTask === false || (!line.taskID && status !== SessionStatus.active)) {
+		return undefined;
 	}
-	if (!line.taskID) {
-		line.taskID = await addTaskIdToTask(editor, line.text);
-	}
-	const data = await getActivityData(app);
-	inactivateAllActiveTasks(data);
-	addTaskSession(data, line.taskID, SessionStatus.active);
-	await overwriteActivityData(app, data);
+	await makeModifications(app, editor, line, status)
 	return line.taskID;
 }
 
 
-export async function inactivateTask(editor: Editor, app: App): Promise<number | null> {
-	let line = getTaskLine(editor);
-	if (line.isTask === false || !line.taskID) {
-		return null;
+export async function makeModifications(app: App, editor: Editor, line: TaskLine, status: SessionStatus) {
+	if (status === SessionStatus.active && !line.taskID) {
+		line = await modifyTask(editor, line, TaskModification.AddTaskID);
+	}
+	if (status === SessionStatus.complete) {
+		line = await modifyTask(editor, line, TaskModification.MarkComplete);
 	}
 	const data = await getActivityData(app);
 	inactivateAllActiveTasks(data);
-	addTaskSession(data, line.taskID, SessionStatus.inactive);
+	addTaskSession(data, status, line.taskID);
 	await overwriteActivityData(app, data);
-	return line.taskID;
 }
-
 
 function inactivateAllActiveTasks(data: TaskData) {
 	const activeTaskIds = getAllActiveTaskIDs(data);
@@ -93,7 +105,10 @@ function inactivateAllActiveTasks(data: TaskData) {
 	}
 }
 
-function addTaskSession(data: TaskData, taskID: number, status: SessionStatus) {
+function addTaskSession(data: TaskData, status: SessionStatus, taskID?: number) {
+	if (!taskID) {
+		return;
+	}
 	const session = {time: new Date(), status} as Session;
 	// do not add the same status as current status
 	if (!!data[taskID] && data[taskID].last()?.status === status) {
@@ -107,15 +122,24 @@ function addTaskSession(data: TaskData, taskID: number, status: SessionStatus) {
 	}
 }
 
-async function addTaskIdToTask(editor: Editor, text: string): Promise<number> {
-	const split = text.split(/\- \[.{1}\] /);
-	const taskPrefix = (text.match(/\- \[.{1}\] /)?? [])[0];
-	const taskMessage = split[1];
-	const taskID = (new Date()).getTime();
-	const modifiedText = `${taskPrefix}${taskID} ${taskMessage}`;
-	replaceCurrentText(editor, modifiedText);
+enum TaskModification {
+	AddTaskID,
+	MarkComplete
+}
+
+async function modifyTask(editor: Editor, line: TaskLine, mod: TaskModification): Promise<TaskLine> {
+	if (!line.text) {
+		return line;
+	}
+	if (mod === TaskModification.AddTaskID) {
+		line.taskID = (new Date()).getTime();			
+	} else if (mod === TaskModification.MarkComplete) {
+		line.prefix = "- [C]";
+	}
+	const modifiedLine = line.toString();
+	replaceCurrentText(editor, modifiedLine);
 	await app.workspace.getActiveViewOfType(MarkdownView)?.save()
-	return taskID;
+	return line;
 }
 
 function getActivityDataFile(): TFile {
