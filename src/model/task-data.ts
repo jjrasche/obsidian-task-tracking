@@ -3,6 +3,7 @@ import { App } from "obsidian";
 import { Settings } from "Settings";
 import { Session } from "./session";
 import { SessionStatus } from "./session-status";
+import { TaskLine } from "./taskline";
 
 export type TaskDataType = {[key: string]: Session[]};
 export class TaskData {
@@ -18,6 +19,12 @@ export class TaskData {
         const data = await this.file.read(file);
         this.data = JSON.parse(data);
         return this;
+    }
+
+    getActiveTaks(): TaskLine[] {
+        const activeTaskIDs = this.getAllActiveTaskIDs();
+        // this.file.find
+        return [];
     }
     
     addSession(status: SessionStatus, taskID?: number) {
@@ -50,7 +57,8 @@ export class TaskData {
     
     async save() {
         const dataString = JSON.stringify(this.data);
-        const file = this.file.find(this.settings.taskDataFileName);
+        // todo: test if all 3 steps are needed to ave
+        const file = await this.file.createOrFind(this.settings.taskDataFileName);
         await this.file.tryDelete(this.app, file);
         await this.app.vault.create(this.settings.taskDataFileName, dataString);
     }

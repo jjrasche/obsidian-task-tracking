@@ -4,7 +4,7 @@ export class FileService {
 	constructor(private app: App) {}
 
 	find(fileName: string): TFile {
-		const f = this.app.vault.getFiles().find((f: TFile) => f.name === fileName);
+		const f = this.app.vault.getFiles().find((f: TFile) => f.path.toLowerCase().contains(fileName.replace("\\", "/").toLowerCase()));
 		if (!f) {
 			throw Error(`file ${fileName} not found.`);
 		}

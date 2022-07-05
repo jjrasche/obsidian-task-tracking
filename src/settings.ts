@@ -1,5 +1,5 @@
 export const DEFAULT_SETTINGS: Settings = {
-    taskDataFileName: ".\.obsidian\task-tracking.json",
+    taskDataFileName: "data\\task-tracking.json",
     onlyOneTaskActive: true
 };
 

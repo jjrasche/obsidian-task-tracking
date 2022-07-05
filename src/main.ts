@@ -26,6 +26,7 @@ import { DEFAULT_SETTINGS, Settings } from 'settings';
 export default class TaskTrackingPlugin extends Plugin {
     public editor_handler: Editor;
     public settings: Settings;
+	statusBar: HTMLElement;
 
 	async onload() {
 		await this.load_settings();
@@ -33,6 +34,7 @@ export default class TaskTrackingPlugin extends Plugin {
 		this.addCommand({
 			id: 'activate-task-command',
 			name: 'Activate Task',
+			hotkeys: [{ modifiers: ["Alt"], key: "a" }],
 			editorCheckCallback:  (check: boolean, editor: Editor) => {
 				if (!!check) {
 					return !!editor;
@@ -40,6 +42,30 @@ export default class TaskTrackingPlugin extends Plugin {
 				changeTask(this.app, editor, this.settings, SessionStatus.active);
 			}
 		});
+		this.addCommand({
+			id: 'inactivate-task-command',
+			name: 'Inactivate Task',
+			hotkeys: [{ modifiers: ["Alt"], key: "i" }],
+			editorCheckCallback:  (check: boolean, editor: Editor) => {
+				if (!!check) {
+					return !!editor;
+				}
+				changeTask(this.app, editor, this.settings, SessionStatus.inactive);
+			}
+		});
+		this.addCommand({
+			id: 'complete-task-command',
+			name: 'Complete Task',
+			hotkeys: [{ modifiers: ["Alt"], key: "c" }],
+			editorCheckCallback:  (check: boolean, editor: Editor) => {
+				if (!!check) {
+					return !!editor;
+				}
+				changeTask(this.app, editor, this.settings, SessionStatus.complete);
+			}
+		});
+		this.statusBar = this.addStatusBarItem();
+
 		// this.addRibbonIcon('up-arrow-with-tail', 'Activity Tracker Plugin', (evt: MouseEvent) => {});
 		// this.registerDomEvent(document, 'click', (evt: MouseEvent) => {});
 		// this.registerInterval(window.setInterval(() => conole.log('setInterval'), 5 * 60 * 1000)); // When registering intervals, this function will automatically clear the interval when the plugin is disabled.

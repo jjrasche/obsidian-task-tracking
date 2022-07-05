@@ -54,7 +54,7 @@ export class TaskLine {
         if (mod === TaskModification.AddTaskID) {
             this.taskID = (new Date()).getTime();			
         } else if (mod === TaskModification.MarkComplete) {
-            this.prefix = "- [C]";
+            this.prefix = this.prefix?.replace("[ ]", "[C]");
         }
         await this.replaceCurrentTask();
     }
