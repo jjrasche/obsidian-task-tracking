@@ -1,5 +1,5 @@
 import { DataViewService } from "data-view.service";
-import { Status } from "model/status";
+import { Status, StatusIndicator } from "model/status";
 import { isActive, TaskDataService, TaskDataType } from "task-data.service";
 import { App, Editor, EditorPosition, TFile, Vault } from "obsidian";
 import { Settings } from "settings";
@@ -39,7 +39,7 @@ export class ModifyTaskService {
 			throw Error(`could not find current task in file: ${this.file?.name} on line: ${this.cursor.line}`)
 		}
 		// only activate should allow for adding an id to a task without one
-		if (!currentTask.taskID && status !== Status.active)	{
+		if (!currentTask.taskID && status !== Status.Active)	{
 			return;
 		}
 		// do not add the same status as current status
@@ -48,38 +48,40 @@ export class ModifyTaskService {
 			return;
 		}
 		// setting specific logic for only allowing 1 task active at a time
-		if (!this.settings.onlyOneTaskActive && status === Status.active) {
-			this.inactivateAllActiveTasks();
+		if (this.settings.onlyOneTaskActive && status === Status.Active) {
+			await this.inactivateAllActiveTasks();
 		}
-		
-		if (!currentTask.taskID && status === Status.active) {
+		if (!currentTask.taskID && status === Status.Active) {
 			currentTask.taskID = this.getNextTaskID();
 		}
-		this.changeTaskStatus(currentTask.taskID, status);
+		await this.changeTaskStatus(currentTask.taskID, status);
 		await this.tds.save();
 		return currentTask.taskID;
 	}
 	
 	// data is the source of truth
-	private inactivateAllActiveTasks() {
+	private async inactivateAllActiveTasks() {
 		// update backing data
-		this.tds.getTaskIDs(isActive).forEach((taskID: number) => {
-			this.changeTaskStatus(taskID, Status.inactive);
-		});
+		const activeTaskIDs = this.tds.getTaskIDs(isActive)
+		for (const taskID of activeTaskIDs) {
+			await this.changeTaskStatus(taskID, Status.Inactive);
+		}
 	}
 	
-	private changeTaskStatus(taskID: number, status: Status) {
-		this.tds.addSession(taskID, Status.inactive);
+	private async changeTaskStatus(taskID: number, status: Status) {
+		this.tds.addSession(taskID, status);
 		const sourceTask = this.tasks.find(task => task.taskID === taskID);
 		if (!sourceTask) {
 			throw new Error(`could not find sourceTask with id:${taskID}`);
 		}
-		sourceTask.status = status;
-		sourceTask.modifyTaskSourceFile(this.fs);
+		sourceTask.status = StatusIndicator[status];
+		await sourceTask.modifyTaskSourceFile(this.fs);
 	}
 
 	private getNextTaskID(): number {
-		return parseInt(Object.keys(this.tds.data).sort()[0]) + 1;
+		const keys = Object.keys(this.tds.data).sort();
+		const num = keys.length === 0 ? 0 : parseInt(Object.keys(this.tds.data).sort()[0]);
+		return num + 1;
 	}
 }
 

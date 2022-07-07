@@ -9,13 +9,13 @@ export class DataViewService {
         path, line, status, text
     */
     getManagedTasks(path: string, cursor: EditorPosition): ManagedTask[] {
-        const tasks = this.getAllTasks()
-            .filter(t => 
+        const tasks = this.getAllTasks();
+        const managedTasks = tasks.filter(t => 
                 t.text.contains("id:") 
                 || (t.path == path && t.line == cursor.line)
             )    // filter for tasks with an ID
             .map(task => new ManagedTask(task, app.vault));
-        return tasks;
+        return managedTasks;
     }
 
     private getAllTasks(): STask[] {

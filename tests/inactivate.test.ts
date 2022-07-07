@@ -10,9 +10,8 @@ export function InactivateTaskTests(t: TestTaskTrackingPlugin) {
         const initialData = {};
         await t.setupTest(fileContent, initialData);
         // act
-        const actualTaskID = await (new ModifyTaskService(t.app, t.editor, t.settings)).changeCurrentTask(Status.inactive) as number;
+        await (await (new ModifyTaskService(t.app, t.editor, t.settings)).setup()).changeCurrentTask(Status.Inactive) as number;
         // assert
-        expect(actualTaskID).to.be.undefined;
         await t.expectNoChanges(fileContent, initialData);
     });
 
@@ -22,9 +21,8 @@ export function InactivateTaskTests(t: TestTaskTrackingPlugin) {
         const initialData = {};
         await t.setupTest(fileContent, initialData);
         // act
-        const actualTaskID = await (new ModifyTaskService(t.app, t.editor, t.settings)).changeCurrentTask(Status.inactive) as number;
+        await (await (new ModifyTaskService(t.app, t.editor, t.settings)).setup()).changeCurrentTask(Status.Inactive) as number;
         // assert
-        expect(actualTaskID).to.be.undefined;
         await t.expectNoChanges(fileContent, initialData);
      });
 
@@ -32,12 +30,11 @@ export function InactivateTaskTests(t: TestTaskTrackingPlugin) {
         // arrange
         const taskID = 12345;
         const fileContent = `- [ ] I am a task without an ID id:${taskID}`;
-        const initialData = {[taskID]: [{time: new Date(), status: Status.inactive}]};
+        const initialData = {[taskID]: [{time: new Date(), status: Status.Inactive}]};
         await t.setupTest(fileContent, initialData);
         // act
-        const actualTaskID = await (new ModifyTaskService(t.app, t.editor, t.settings)).changeCurrentTask(Status.inactive) as number;
+        await (await (new ModifyTaskService(t.app, t.editor, t.settings)).setup()).changeCurrentTask(Status.Inactive) as number;
         // assert
-        expect(actualTaskID).to.be.eql(taskID);
         await t.expectNoChanges(fileContent, initialData);
      });
 
@@ -45,27 +42,29 @@ export function InactivateTaskTests(t: TestTaskTrackingPlugin) {
         // arrange
         const taskID = 12345;
         const fileContent = `- [ ] I am a task without an ID id:${taskID}`;
-        const initialData = {[taskID]: [{time: new Date(), status: Status.complete}]};
+        const initialData = {[taskID]: [{time: new Date(), status: Status.Complete}]};
         await t.setupTest(fileContent, initialData);
         // act
-        const actualTaskID = await (new ModifyTaskService(t.app, t.editor, t.settings)).changeCurrentTask(Status.inactive) as number;
+        await (await (new ModifyTaskService(t.app, t.editor, t.settings)).setup()).changeCurrentTask(Status.Inactive) as number;
         // assert
-        expect(actualTaskID).to.eql(taskID);
-        await t.expectTaskInData(initialData, taskID, 1, 2, Status.inactive);
-        await t.expectTargetFile(fileContent);
+        const newData = { [taskID]: [{time: new Date(), status: Status.Inactive}]};
+        const expectedData = t.combineData(initialData, newData);
+        await t.expectTaskInData(expectedData);
+        await t.expectTargetFile(`- [I] I am a task without an ID id:${taskID}`);
      });
 
      t.test("if current task is complete, new inactive session is added", async() => {
         // arrange
         const taskID = 12345;
         const fileContent = `- [ ] I am a task without an ID id:${taskID}`;
-        const initialData = {[taskID]: [{time: new Date(), status: Status.complete}]};
+        const initialData = {[taskID]: [{time: new Date(), status: Status.Complete}]};
         await t.setupTest(fileContent, initialData);
         // act
-        const actualTaskID = await (new ModifyTaskService(t.app, t.editor, t.settings)).changeCurrentTask(Status.inactive) as number;
+        await (await (new ModifyTaskService(t.app, t.editor, t.settings)).setup()).changeCurrentTask(Status.Inactive) as number;
         // assert
-        expect(actualTaskID).to.eql(taskID);
-        await t.expectTaskInData(initialData, taskID, 1, 2, Status.inactive);
-        await t.expectTargetFile(fileContent);
+        const newData = { [taskID]: [{time: new Date(), status: Status.Inactive}]};
+        const expectedData = t.combineData(initialData, newData);
+        await t.expectTaskInData(expectedData);
+        await t.expectTargetFile(`- [I] I am a task without an ID id:${taskID}`);
      });
 }

@@ -39,7 +39,7 @@ export default class TaskTrackingPlugin extends Plugin {
 				if (!!check) {
 					return !!editor;
 				}
-				changeTask(this.app, editor, this.settings, SessionStatus.active);
+				changeTask(this.app, editor, this.settings, SessionStatus.Active);
 			}
 		});
 		this.addCommand({
@@ -50,7 +50,7 @@ export default class TaskTrackingPlugin extends Plugin {
 				if (!!check) {
 					return !!editor;
 				}
-				changeTask(this.app, editor, this.settings, SessionStatus.inactive);
+				changeTask(this.app, editor, this.settings, SessionStatus.Inactive);
 			}
 		});
 		this.addCommand({
@@ -61,7 +61,7 @@ export default class TaskTrackingPlugin extends Plugin {
 				if (!!check) {
 					return !!editor;
 				}
-				changeTask(this.app, editor, this.settings, SessionStatus.complete);
+				changeTask(this.app, editor, this.settings, SessionStatus.Complete);
 			}
 		});
 		this.statusBar = this.addStatusBarItem();

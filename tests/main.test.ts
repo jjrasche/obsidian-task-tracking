@@ -48,7 +48,7 @@ export default class TestTaskTrackingPlugin extends Plugin {
     async setup() {
         this.tests = new Array();
         // todo: the plugin is TestTaskTrackingPlugin not TaskTrackingPlugin. so don't have access to the actual plugins settings
-        // this.plugin = this.plugins.getPlugin(PLUGIN_NAME); 
+        // this.plugin = this.plugins.getPlugin(PLUGIN_NAME);
         this.target_file = await this.file.createOrFind(TARGET_FILE_NAME);
         this.data_file = await this.file.createOrFind(DATA_FILE_NAME);
         this.settings.taskDataFileName = DATA_FILE_NAME;
@@ -78,8 +78,8 @@ export default class TestTaskTrackingPlugin extends Plugin {
 
     async load_tests() {
         await this.loadTestSuite(ActivateTaskTests)
-        // await this.loadTestSuite(InactivateTaskTests);
-        // await this.loadTestSuite(CompleteTaskTests);
+        await this.loadTestSuite(InactivateTaskTests);
+        await this.loadTestSuite(CompleteTaskTests);
         // await this.loadTestSuite(TaskLineTests);
         const focusedTests = this.tests.filter(t => t.name.startsWith("fff"));
         if (focusedTests.length > 0) {
@@ -149,23 +149,38 @@ export default class TestTaskTrackingPlugin extends Plugin {
         this.editor.setCursor(line);
     }
     
-    async expectTaskInData(initialData: {}, taskID: number, expectedNumTasks = 1, expecteNumSessions = 1, expectedMostRecentSessionStatus = Status.active) {
-        const data = await this.getData();
-        const mostRecentSession = (data[taskID].last() ?? {}) as Session;
-        expect(Object.keys(data)).to.have.lengthOf(expectedNumTasks);               // 1 task
-        expect(data[taskID]).to.not.be.null;                                        // taskID exists in data
-        expect(data[taskID]).to.have.lengthOf(expecteNumSessions);                  // task has 1 session
-        expect(mostRecentSession.status).to.eql(expectedMostRecentSessionStatus);   // session has active status
-        expect(mostRecentSession.time)
-            .lessThan(new Date())
-            .greaterThan(new Date((new Date()).setSeconds(-10)));                   // session has active status
-        data[taskID].pop();
-        if (data[taskID].length === 0) {
-            delete data[taskID];
-        }
-        expect(JSON.stringify(data)).to.eql(JSON.stringify(initialData))            // only 1 session added
+    async expectTaskInData(expected: TaskDataType) {
+        const actual = await this.getData();
+        expect(Object.keys(actual).sort()).to.eql(Object.keys(expected).sort());  // every expected task is present
+        Object.keys(actual).forEach(key => {    // each task
+            const actualSessions = actual[key];
+            const expectedSessions = expected[key];
+            expect(actualSessions.length).to.eql(expectedSessions.length);
+            actualSessions.forEach((actualSession, idx) => {    // each session
+                const expectedSession = expectedSessions[idx];
+                expect(actualSession.status).to.eql(expectedSession.status);
+                expect(actualSession.time)      // actual time should be before expected time
+                    .greaterThan(new Date(expectedSession.time.getTime() - 2000))  
+                    .lessThan(new Date(expectedSession.time.getTime() + 500));
+            });
+        });        
     }
     
+    /*
+        same keys -> concatenate values
+        different keys add 
+    */
+    combineData(current: TaskDataType, updated: TaskDataType): TaskDataType {
+        Object.keys(current).forEach(key => {
+            const matchingUpdate = updated[key];
+            if (!!matchingUpdate) {
+                current[key] = current[key].concat(matchingUpdate)
+                delete updated[key];
+            }
+        });
+        return {...current, ...updated};
+    }
+
     async expectTargetFile(expectedFileContent: string) {
         const targetFile = await this.file.read(this.target_file);
         expect(targetFile).to.eql(expectedFileContent);     // taskID added to selected task

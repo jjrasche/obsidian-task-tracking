@@ -67,7 +67,7 @@ export class ManagedTask implements STask {
 		const lines = originalContent.split("\n")
 		lines[this.line] = this.toString();
 		const updatedContent = lines.join("\n");
-		fs.modify(this.path, updatedContent);
+		await fs.modify(this.path, updatedContent);
 
 		// await this.vault.adapter.write(this.path, this.toString());
 	}

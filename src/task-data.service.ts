@@ -11,7 +11,7 @@ export type TaskFilter = (taskID: number, sessions: Session[]) => boolean;
 export const isActive: TaskFilter = (taskID: number, sessions: Session[]) => {
     const mostRecentSession = sessions[sessions.length - 1];
     if (!!mostRecentSession) {
-        if (mostRecentSession.status === Status.active) {
+        if (mostRecentSession.status === Status.Active) {
             return true;
         }
     }
@@ -40,7 +40,7 @@ export class TaskDataService {
         }
         const session = { time: new Date(), status };
         if (!this.data[taskID]) {
-			if (status !== Status.active) {
+			if (status !== Status.Active) {
 				throw Error("should only be allowed to ad a new task to data via an activation change.");
 			}
 			this.data[taskID] = [session];

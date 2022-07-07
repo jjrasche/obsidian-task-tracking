@@ -3,12 +3,12 @@ import { App, TFile } from "obsidian";
 export class FileService {
 	constructor(private app: App) {}
 
-	find(fileName: string): TFile {
-		const f = this.app.vault.getFiles().find((f: TFile) => f.path.toLowerCase().contains(fileName.replace("\\", "/").toLowerCase()));
-		if (!f) {
+	find(fileName: string, attempt = false): TFile {
+		const f = this.app.vault.getFiles().find((f: TFile) => f.path.contains(fileName));
+		if (!attempt && !f) {
 			throw Error(`file ${fileName} not found.`);
 		}
-		return f;
+		return f as TFile;
 	}
 	
 	async tryDelete(app: App, file: TFile): Promise<boolean> {
