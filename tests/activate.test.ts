@@ -1,7 +1,7 @@
 import TestTaskTrackingPlugin from "./main.test";
 import { expect } from "chai";
-import { changeTask } from "logic";
-import { SessionStatus } from "model/session-status";
+import { changeTask } from "modify-task.service";
+import { SessionStatus } from "model/status";
 
 export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
     t.test("if current line is not a task, should not change task or data", async () => {
@@ -19,7 +19,7 @@ export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
     t.test("if current task is active, no session is added ", async() => {
         // arrange
         const taskID = 12345;
-        const fileContent = `- [ ] ${taskID} I am a task without an ID`;
+        const fileContent = `- [ ] I am a task without an ID id:${taskID}`;
         const initialData = {[taskID]: [{time: new Date(), status: SessionStatus.active}]};
         await t.setupTest(fileContent, initialData);
         // act
@@ -38,13 +38,13 @@ export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
         const taskID = await changeTask(t.app, t.editor, t.settings, SessionStatus.active) as number;
         // assert
         await t.expectTaskInData(initialData, taskID);
-        await t.expectTargetFile(`- [ ] ${taskID} I am a task without an ID`);
+        await t.expectTargetFile(`- [ ] I am a task without an ID id:${taskID}`);
     });
     
     t.test("if current task is inactive, new active session is added", async() => {
         // arrange
         const taskID = 12345;
-        const fileContent = `- [ ] ${taskID} I am a task without an ID`;
+        const fileContent = `- [ ] I am a task without an ID id:${taskID}`;
         const initialData = {[taskID]: [{time: new Date(), status: SessionStatus.inactive}]};
         await t.setupTest(fileContent, initialData);
         // act
@@ -58,7 +58,7 @@ export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
     t.test("if current task is complete, new active session is added", async() => {
         // arrange
         const taskID = 12345;
-        const fileContent = `- [ ] ${taskID} I am a task without an ID`;
+        const fileContent = `- [ ] I am a task without an ID id:${taskID}`;
         const initialData = {[taskID]: [{time: new Date(), status: SessionStatus.complete}]};
         await t.setupTest(fileContent, initialData);
         // act
@@ -73,7 +73,7 @@ export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
         // arrange
         const task1ID = 12345;
         const task2ID = 23456;
-        const fileContent = `- [ ] ${task1ID} I am a task with an id\n- [ ] ${task2ID} I am also a task with an id`;
+        const fileContent = `- [ ] I am a task with an id id:${task1ID}\n- [ ] I am also a task with an id id:${task2ID}`;
         const initialData = {
             [task1ID]: [{time: new Date(), status: SessionStatus.active}],
             [task2ID]: [{time: new Date(), status: SessionStatus.inactive}],            
@@ -94,6 +94,6 @@ export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
     //     const taskID = await changeTask(t.app, t.editor, t.settings, SessionStatus.active) as number;
     //     // assert
     //     await t.expectTaskInData(taskID);
-    //     await t.expectTargetFile(`- [ ] ${taskID} I am a task without an ID`);
+    //     await t.expectTargetFile(`- [ ] I am a task without an ID id:${taskID}`);
     // });   
 }

@@ -5,11 +5,14 @@ import { Session } from "model/session";
 import { InactivateTaskTests } from "./inactivate.test";
 import { ActivateTaskTests } from "./activate.test";
 import { CompleteTaskTests } from "./complete.test";
-import { TaskDataType } from "model/task-data";
-import { SessionStatus } from "model/session-status";
+import { TaskDataType } from "task-data.service";
+import { SessionStatus } from "model/status";
 import { DEFAULT_SETTINGS, Settings } from "settings";
 import { TaskLineTests } from "./taskline.test";
 import { FileService } from "file.service";
+import { TaskManipulationService } from "task-manipulation.service";
+import { DataViewService } from "data-view.service";
+import { isBreakOrContinueStatement } from "typescript";
 
 
 export const PLUGIN_NAME = "obsidian-task-tracking";
@@ -34,6 +37,8 @@ export default class TestTaskTrackingPlugin extends Plugin {
     }
 
     async onload() {
+        const tasks = (new DataViewService(this.app)).getTaks();
+        debugger;
         await this.load_settings();
         this.run();
     }

@@ -1,7 +1,7 @@
 import TestTaskTrackingPlugin from "./main.test";
 import { expect } from "chai";
-import { changeTask } from "logic";
-import { SessionStatus } from "model/session-status";
+import { changeTask } from "modify-task.service";
+import { SessionStatus } from "model/status";
 import { TaskLine } from "model/taskline";
 
 /*
@@ -37,7 +37,7 @@ export function TaskLineTests(t: TestTaskTrackingPlugin) {
     });
     t.test("task with taskID", async () => {
         // arrange
-        const fileContent = "\t- [ ] 3847 not a task, just a line";
+        const fileContent = "\t- [ ] not a task, just a line id:3847";
         await t.setupTest(fileContent)
         // act
         const line = new TaskLine(t.editor);

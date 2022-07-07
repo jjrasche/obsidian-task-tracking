@@ -1,5 +1,5 @@
-import { changeTask } from 'logic';
-import { SessionStatus } from 'model/session-status';
+import { changeTask } from 'modify-task.service';
+import { SessionStatus } from 'model/status';
 import { Editor, MarkdownView, Plugin } from 'obsidian';
 import { DEFAULT_SETTINGS, Settings } from 'settings';
 
