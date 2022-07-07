@@ -1,18 +1,15 @@
 import { Editor, MarkdownView, Plugin, TFile } from "obsidian";
 import { expect } from "chai";
-import TaskTrackingPlugin from "main";
 import { Session } from "model/session";
 import { InactivateTaskTests } from "./inactivate.test";
 import { ActivateTaskTests } from "./activate.test";
 import { CompleteTaskTests } from "./complete.test";
 import { TaskDataType } from "task-data.service";
-import { SessionStatus } from "model/status";
 import { DEFAULT_SETTINGS, Settings } from "settings";
 import { TaskLineTests } from "./taskline.test";
 import { FileService } from "file.service";
-import { TaskManipulationService } from "task-manipulation.service";
 import { DataViewService } from "data-view.service";
-import { isBreakOrContinueStatement } from "typescript";
+import { Status } from "model/status";
 
 
 export const PLUGIN_NAME = "obsidian-task-tracking";
@@ -31,14 +28,12 @@ export default class TestTaskTrackingPlugin extends Plugin {
     target_file: TFile;
     file: FileService = new FileService(this.app);
 
-    // todo: try to code around this limitaiotn
+    // todo: try to code around this limitaion
     async load_settings(): Promise<void> {
         this.settings = Object.assign({}, DEFAULT_SETTINGS);
     }
 
     async onload() {
-        const tasks = (new DataViewService(this.app)).getTaks();
-        debugger;
         await this.load_settings();
         this.run();
     }
@@ -53,7 +48,7 @@ export default class TestTaskTrackingPlugin extends Plugin {
     async setup() {
         this.tests = new Array();
         // todo: the plugin is TestTaskTrackingPlugin not TaskTrackingPlugin. so don't have access to the actual plugins settings
-        // this.plugin = this.plugins.getPlugin(PLUGIN_NAME);
+        // this.plugin = this.plugins.getPlugin(PLUGIN_NAME); 
         this.target_file = await this.file.createOrFind(TARGET_FILE_NAME);
         this.data_file = await this.file.createOrFind(DATA_FILE_NAME);
         this.settings.taskDataFileName = DATA_FILE_NAME;
@@ -83,9 +78,9 @@ export default class TestTaskTrackingPlugin extends Plugin {
 
     async load_tests() {
         await this.loadTestSuite(ActivateTaskTests)
-        await this.loadTestSuite(InactivateTaskTests);
-        await this.loadTestSuite(CompleteTaskTests);
-        await this.loadTestSuite(TaskLineTests);
+        // await this.loadTestSuite(InactivateTaskTests);
+        // await this.loadTestSuite(CompleteTaskTests);
+        // await this.loadTestSuite(TaskLineTests);
         const focusedTests = this.tests.filter(t => t.name.startsWith("fff"));
         if (focusedTests.length > 0) {
             this.tests = focusedTests;
@@ -154,7 +149,7 @@ export default class TestTaskTrackingPlugin extends Plugin {
         this.editor.setCursor(line);
     }
     
-    async expectTaskInData(initialData: {}, taskID: number, expectedNumTasks = 1, expecteNumSessions = 1, expectedMostRecentSessionStatus = SessionStatus.active) {
+    async expectTaskInData(initialData: {}, taskID: number, expectedNumTasks = 1, expecteNumSessions = 1, expectedMostRecentSessionStatus = Status.active) {
         const data = await this.getData();
         const mostRecentSession = (data[taskID].last() ?? {}) as Session;
         expect(Object.keys(data)).to.have.lengthOf(expectedNumTasks);               // 1 task

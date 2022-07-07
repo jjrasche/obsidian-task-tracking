@@ -1,7 +1,7 @@
 import TestTaskTrackingPlugin from "./main.test";
 import { expect } from "chai";
-import { changeTask } from "modify-task.service";
-import { SessionStatus } from "model/status";
+import { Status } from "model/status";
+import { ModifyTaskService } from "modify-task.service";
 
 export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
     t.test("if current line is not a task, should not change task or data", async () => {
@@ -10,9 +10,8 @@ export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
         const initialData = {};
         await t.setupTest(fileContent, initialData);
         // act
-        const actualTaskID = await changeTask(t.app, t.editor, t.settings, SessionStatus.active) as number;
+        await (await (new ModifyTaskService(t.app, t.editor, t.settings)).setup()).changeCurrentTask(Status.active) as number;
         // assert
-        expect(actualTaskID).to.be.undefined;
         await t.expectNoChanges(fileContent, initialData);
     });
 
@@ -20,38 +19,36 @@ export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
         // arrange
         const taskID = 12345;
         const fileContent = `- [ ] I am a task without an ID id:${taskID}`;
-        const initialData = {[taskID]: [{time: new Date(), status: SessionStatus.active}]};
+        const initialData = {[taskID]: [{time: new Date(), status: Status.active}]};
         await t.setupTest(fileContent, initialData);
         // act
-        const actualTaskID = await changeTask(t.app, t.editor, t.settings, SessionStatus.active) as number;
+        await (await (new ModifyTaskService(t.app, t.editor, t.settings)).setup()).changeCurrentTask(Status.active) as number;
         // assert
-        expect(actualTaskID).to.be.eql(taskID);
         await t.expectNoChanges(fileContent, initialData);
     });
 
-    t.test("if current task doesn't have a taskID, create taskID and add it to task and data", async () => {
+    t.test("fffif current task doesn't have a taskID, create taskID and add it to task and data", async () => {
         // arrange
         const fileContent = "- [ ] I am a task without an ID";
         const initialData = {};
         await t.setupTest(fileContent, initialData);
         // act
-        const taskID = await changeTask(t.app, t.editor, t.settings, SessionStatus.active) as number;
+        await (await (new ModifyTaskService(t.app, t.editor, t.settings)).setup()).changeCurrentTask(Status.active) as number;
         // assert
-        await t.expectTaskInData(initialData, taskID);
-        await t.expectTargetFile(`- [ ] I am a task without an ID id:${taskID}`);
+        await t.expectTaskInData(initialData, 1);
+        await t.expectTargetFile(`- [ ] I am a task without an ID id:${1}`);
     });
     
     t.test("if current task is inactive, new active session is added", async() => {
         // arrange
         const taskID = 12345;
         const fileContent = `- [ ] I am a task without an ID id:${taskID}`;
-        const initialData = {[taskID]: [{time: new Date(), status: SessionStatus.inactive}]};
+        const initialData = {[taskID]: [{time: new Date(), status: Status.inactive}]};
         await t.setupTest(fileContent, initialData);
         // act
-        const actualTaskID = await changeTask(t.app, t.editor, t.settings, SessionStatus.active) as number;
+        await (await (new ModifyTaskService(t.app, t.editor, t.settings)).setup()).changeCurrentTask(Status.active) as number;
         // assert
-        expect(actualTaskID).to.eql(taskID);
-        await t.expectTaskInData(initialData, taskID, 1, 2, SessionStatus.active);
+        await t.expectTaskInData(initialData, taskID, 1, 2, Status.active);
         await t.expectTargetFile(fileContent);
     });
     
@@ -59,13 +56,12 @@ export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
         // arrange
         const taskID = 12345;
         const fileContent = `- [ ] I am a task without an ID id:${taskID}`;
-        const initialData = {[taskID]: [{time: new Date(), status: SessionStatus.complete}]};
+        const initialData = {[taskID]: [{time: new Date(), status: Status.complete}]};
         await t.setupTest(fileContent, initialData);
         // act
-        const actualTaskID = await changeTask(t.app, t.editor, t.settings, SessionStatus.active) as number;
+        await (await (new ModifyTaskService(t.app, t.editor, t.settings)).setup()).changeCurrentTask(Status.active) as number;
         // assert
-        expect(actualTaskID).to.eql(taskID);
-        await t.expectTaskInData(initialData, taskID, 1, 2, SessionStatus.active);
+        await t.expectTaskInData(initialData, taskID, 1, 2, Status.active);
         await t.expectTargetFile(fileContent);
     });
     
@@ -75,15 +71,14 @@ export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
         const task2ID = 23456;
         const fileContent = `- [ ] I am a task with an id id:${task1ID}\n- [ ] I am also a task with an id id:${task2ID}`;
         const initialData = {
-            [task1ID]: [{time: new Date(), status: SessionStatus.active}],
-            [task2ID]: [{time: new Date(), status: SessionStatus.inactive}],            
+            [task1ID]: [{time: new Date(), status: Status.active}],
+            [task2ID]: [{time: new Date(), status: Status.inactive}],            
         };
         await t.setupTest(fileContent, initialData, 1);
         // act
-        const actualTaskID = await changeTask(t.app, t.editor, t.settings, SessionStatus.active) as number;
+        await (await (new ModifyTaskService(t.app, t.editor, t.settings)).setup()).changeCurrentTask(Status.active) as number;
         // assert
-        expect(actualTaskID).to.eql(task2ID);
-        await t.expectTaskInData(initialData, task2ID, 2, 2, SessionStatus.active);
+        await t.expectTaskInData(initialData, task2ID, 2, 2, Status.active);
         await t.expectTargetFile(fileContent);
     });
 
@@ -91,7 +86,7 @@ export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
     //     // arrange
     //     await t.setupTest("- [ ] I am a task without an ID");
     //     // act
-    //     const taskID = await changeTask(t.app, t.editor, t.settings, SessionStatus.active) as number;
+        // await (await (new ModifyTaskService(t.app, t.editor, t.settings)).setup()).changeCurrentTask(Status.active) as number;
     //     // assert
     //     await t.expectTaskInData(taskID);
     //     await t.expectTargetFile(`- [ ] I am a task without an ID id:${taskID}`);

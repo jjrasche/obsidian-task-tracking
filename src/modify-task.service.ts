@@ -4,29 +4,36 @@ import { isActive, TaskDataService, TaskDataType } from "task-data.service";
 import { App, Editor, EditorPosition, TFile, Vault } from "obsidian";
 import { Settings } from "settings";
 import { ManagedTask } from "./model/activity-task";
+import { FileService } from "file.service";
 
 export class ModifyTaskService {
 	tds: TaskDataService;
 	tasks: ManagedTask[];
 	cursor: EditorPosition;
 	file: TFile;
-	constructor(private app: App, private editor: Editor, private settings: Settings) { }
+	fs: FileService;
+	isTask: boolean;
 
-	async setup() {
-		if (this.isTask()) {
-			this.tds = await new TaskDataService(this.app, this.settings).setup();
-			this.tasks = (new DataViewService(this.app)).getManagedTasks();
-			this.file = this.app.workspace.getActiveFile() as TFile;
-		}
-	}
-
-	isTask(): boolean {
+	constructor(private app: App, private editor: Editor, private settings: Settings) {
 		this.cursor = this.editor.getCursor();
 		const line = this.editor.getLine(this.cursor.line);
-		return !!line.match(/^\t*- \[.{1}\]\s/g);
+		this.isTask = !!line.match(/^\t*- \[.{1}\]\s/g);
 	}
 
-	async changeCurrentTask(status: Status): Promise<number | undefined> {
+	async setup(): Promise<this> {
+		if (this.isTask) {
+			this.tds = await new TaskDataService(this.app, this.settings).setup();
+			this.file = this.app.workspace.getActiveFile() as TFile;
+			this.tasks = (new DataViewService(this.app)).getManagedTasks(this.file.path, this.cursor);
+			this.fs = new FileService(this.app);
+		}
+		return this
+	}
+
+	async changeCurrentTask(status: Status) {
+		if (!this.isTask) {
+			return;
+		}
 		const currentTask = this.tasks.find(task => task.path == this.file?.path && task.line === this.cursor.line)
 		if (!currentTask) {
 			throw Error(`could not find current task in file: ${this.file?.name} on line: ${this.cursor.line}`)
@@ -68,7 +75,7 @@ export class ModifyTaskService {
 			throw new Error(`could not find sourceTask with id:${taskID}`);
 		}
 		sourceTask.status = status;
-		sourceTask.modifyTaskSourceFile();
+		sourceTask.modifyTaskSourceFile(this.fs);
 	}
 
 	private getNextTaskID(): number {

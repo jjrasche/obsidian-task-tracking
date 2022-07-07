@@ -1,5 +1,5 @@
 import { ManagedTask } from "model/activity-task";
-import { App } from "obsidian";
+import { App, EditorPosition } from "obsidian";
 import { DataviewApi, getAPI, STask } from "obsidian-dataview";
 
 export class DataViewService {
@@ -8,9 +8,12 @@ export class DataViewService {
     /*
         path, line, status, text
     */
-    getManagedTasks(): ManagedTask[] {
+    getManagedTasks(path: string, cursor: EditorPosition): ManagedTask[] {
         const tasks = this.getAllTasks()
-            .filter(t => t.text.contains("id:"))    // filter for tasks with an ID
+            .filter(t => 
+                t.text.contains("id:") 
+                || (t.path == path && t.line == cursor.line)
+            )    // filter for tasks with an ID
             .map(task => new ManagedTask(task, app.vault));
         return tasks;
     }
