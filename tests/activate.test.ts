@@ -9,7 +9,7 @@ export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
         const initialData = {};
         await t.setupTest(fileContent, initialData);
         // act
-        await (await (new ModifyTaskService(t.app, t.editor, t.settings)).setup()).changeCurrentTask(Status.Active) as number;
+        await (new ModifyTaskService(t.app, t.editor, t.settings)).changeCurrentTask(Status.Active);
         // assert
         await t.expectNoChanges(fileContent, initialData);
     });
@@ -21,7 +21,7 @@ export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
         const initialData = {[taskID]: [{time: new Date(), status: Status.Active}]};
         await t.setupTest(fileContent, initialData);
         // act
-        await (await (new ModifyTaskService(t.app, t.editor, t.settings)).setup()).changeCurrentTask(Status.Active) as number;
+        await (new ModifyTaskService(t.app, t.editor, t.settings)).changeCurrentTask(Status.Active);
         // assert
         await t.expectNoChanges(fileContent, initialData);
     });
@@ -32,7 +32,7 @@ export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
         const initialData = {};
         await t.setupTest(fileContent, initialData);
         // act
-        await (await (new ModifyTaskService(t.app, t.editor, t.settings)).setup()).changeCurrentTask(Status.Active) as number;
+        await (new ModifyTaskService(t.app, t.editor, t.settings)).changeCurrentTask(Status.Active);
         // assert
         const expectedData = { [1]: [{time: new Date(), status: Status.Active}]};
         await t.expectTaskInData(expectedData);
@@ -46,7 +46,7 @@ export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
         const initialData = {[taskID]: [{time: new Date(), status: Status.Inactive}]};
         await t.setupTest(fileContent, initialData);
         // act
-        await (await (new ModifyTaskService(t.app, t.editor, t.settings)).setup()).changeCurrentTask(Status.Active) as number;
+        await (new ModifyTaskService(t.app, t.editor, t.settings)).changeCurrentTask(Status.Active);
         // assert
         const newData = { [taskID]: [{time: new Date(), status: Status.Active}]};
         const expectedData = t.combineData(initialData, newData);
@@ -61,7 +61,7 @@ export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
         const initialData = {[taskID]: [{time: new Date(), status: Status.Complete}]};
         await t.setupTest(fileContent, initialData);
         // act
-        await (await (new ModifyTaskService(t.app, t.editor, t.settings)).setup()).changeCurrentTask(Status.Active) as number;
+        await (new ModifyTaskService(t.app, t.editor, t.settings)).changeCurrentTask(Status.Active);
         // assert
         const newData = { [taskID]: [{time: new Date(), status: Status.Active}]};
         const expectedData = t.combineData(initialData, newData);
@@ -75,7 +75,7 @@ export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
         const initialData = {[1]: [{time: new Date(), status: Status.Complete}]};
         await t.setupTest(fileContent, initialData);
         // act
-        await (await (new ModifyTaskService(t.app, t.editor, t.settings)).setup()).changeCurrentTask(Status.Active) as number;
+        await (new ModifyTaskService(t.app, t.editor, t.settings)).changeCurrentTask(Status.Active);
         // assert
         const newData = { [2]: [{time: new Date(), status: Status.Active}]};
         const expectedData = t.combineData(initialData, newData);
@@ -89,7 +89,7 @@ export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
         const initialData = {[1]: [{time: new Date(), status: Status.Complete}], [3]: [{time: new Date(), status: Status.Complete}]};
         await t.setupTest(fileContent, initialData);
         // act
-        await (await (new ModifyTaskService(t.app, t.editor, t.settings)).setup()).changeCurrentTask(Status.Active) as number;
+        await (new ModifyTaskService(t.app, t.editor, t.settings)).changeCurrentTask(Status.Active);
         // assert
         const newData = { [2]: [{time: new Date(), status: Status.Active}]};
         const expectedData = t.combineData(initialData, newData);
@@ -108,7 +108,7 @@ export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
         };
         await t.setupTest(fileContent, initialData, 1);
         // act
-        await (await (new ModifyTaskService(t.app, t.editor, t.settings)).setup()).changeCurrentTask(Status.Active) as number;
+        await (new ModifyTaskService(t.app, t.editor, t.settings)).changeCurrentTask(Status.Active);
         // assert
         const newData = {
             [task1ID]: [{time: new Date(), status: Status.Inactive}],
@@ -133,7 +133,7 @@ export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
         t.settings.onlyOneTaskActive = false; 
         await t.setupTest(fileContent, initialData, 2);
         // act
-        await (await (new ModifyTaskService(t.app, t.editor, t.settings)).setup()).changeCurrentTask(Status.Active) as number;
+        await (new ModifyTaskService(t.app, t.editor, t.settings)).changeCurrentTask(Status.Active);
         // assert
         const newData = {
             [task3ID]: [{time: new Date(), status: Status.Active}],

@@ -6,10 +6,7 @@ import { ActivateTaskTests } from "./activate.test";
 import { CompleteTaskTests } from "./complete.test";
 import { TaskDataType } from "task-data.service";
 import { DEFAULT_SETTINGS, Settings } from "settings";
-import { TaskLineTests } from "./taskline.test";
 import { FileService } from "file.service";
-import { DataViewService } from "data-view.service";
-import { Status } from "model/status";
 
 
 export const PLUGIN_NAME = "obsidian-task-tracking";

@@ -1,5 +1,5 @@
-import { changeTask } from 'modify-task.service';
-import { SessionStatus } from 'model/status';
+import { ModifyTaskService } from 'modify-task.service';
+import { Status } from 'model/status';
 import { Editor, MarkdownView, Plugin } from 'obsidian';
 import { DEFAULT_SETTINGS, Settings } from 'settings';
 
@@ -35,11 +35,11 @@ export default class TaskTrackingPlugin extends Plugin {
 			id: 'activate-task-command',
 			name: 'Activate Task',
 			hotkeys: [{ modifiers: ["Alt"], key: "a" }],
-			editorCheckCallback:  (check: boolean, editor: Editor) => {
+			editorCheckCallback: (check: boolean, editor: Editor) => {
 				if (!!check) {
 					return !!editor;
 				}
-				changeTask(this.app, editor, this.settings, SessionStatus.Active);
+				(new ModifyTaskService(this.app, editor, this.settings)).changeCurrentTask(Status.Active);
 			}
 		});
 		this.addCommand({
@@ -50,7 +50,7 @@ export default class TaskTrackingPlugin extends Plugin {
 				if (!!check) {
 					return !!editor;
 				}
-				changeTask(this.app, editor, this.settings, SessionStatus.Inactive);
+				(new ModifyTaskService(this.app, editor, this.settings)).changeCurrentTask(Status.Inactive);
 			}
 		});
 		this.addCommand({
@@ -61,7 +61,7 @@ export default class TaskTrackingPlugin extends Plugin {
 				if (!!check) {
 					return !!editor;
 				}
-				changeTask(this.app, editor, this.settings, SessionStatus.Complete);
+				(new ModifyTaskService(this.app, editor, this.settings)).changeCurrentTask(Status.Complete);
 			}
 		});
 		this.statusBar = this.addStatusBarItem();

@@ -15,22 +15,22 @@ export class ModifyTaskService {
 	isTask: boolean;
 
 	constructor(private app: App, private editor: Editor, private settings: Settings) {
+	}
+
+	async setup() {
 		this.cursor = this.editor.getCursor();
 		const line = this.editor.getLine(this.cursor.line);
 		this.isTask = !!line.match(/^\t*- \[.{1}\]\s/g);
-	}
-
-	async setup(): Promise<this> {
 		if (this.isTask) {
 			this.tds = await new TaskDataService(this.app, this.settings).setup();
 			this.file = this.app.workspace.getActiveFile() as TFile;
 			this.tasks = (new DataViewService(this.app)).getManagedTasks(this.file.path, this.cursor);
 			this.fs = new FileService(this.app);
 		}
-		return this
 	}
 
 	async changeCurrentTask(status: Status) {
+		await this.setup();
 		if (!this.isTask) {
 			return;
 		}
