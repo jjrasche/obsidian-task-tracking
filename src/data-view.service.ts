@@ -14,7 +14,7 @@ export class DataViewService {
                 t.text.contains("id:") 
                 || (t.path == path && t.line == cursor.line)
             )    // filter for tasks with an ID
-            .map(task => new ManagedTask(task, app.vault));
+            .map(task => new ManagedTask(task));
         return managedTasks;
     }
 

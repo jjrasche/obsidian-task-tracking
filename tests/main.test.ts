@@ -47,8 +47,6 @@ export default class TestTaskTrackingPlugin extends Plugin {
 
     async setup() {
         this.tests = new Array();
-        // todo: the plugin is TestTaskTrackingPlugin not TaskTrackingPlugin. so don't have access to the actual plugins settings
-        // this.plugin = this.plugins.getPlugin(PLUGIN_NAME);
         this.target_file = await this.file.createOrFind(TARGET_FILE_NAME);
         this.data_file = await this.file.createOrFind(DATA_FILE_NAME);
         this.settings.taskDataFileName = DATA_FILE_NAME;

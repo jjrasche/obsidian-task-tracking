@@ -35,7 +35,7 @@ export class ManagedTask implements STask {
 	real: boolean;
 	header: Link;
 
-	constructor(stask: STask, private vault: Vault) {
+	constructor(stask: STask) {
 		Object.keys(stask).forEach(key => (this as any)[key] = stask[key]);
 		this.taskID = this.getTaskID(this.text);
 		this.text = this.getTaskText(this.text);
@@ -59,7 +59,6 @@ export class ManagedTask implements STask {
 		const text = line.split("id:")[0]?.trim();
 		return text;
 	}
-
 	
 	async modifyTaskSourceFile(fs: FileService) {
 		const file = fs.find(this.path);
@@ -68,8 +67,6 @@ export class ManagedTask implements STask {
 		lines[this.line] = this.toString();
 		const updatedContent = lines.join("\n");
 		await fs.modify(this.path, updatedContent);
-
-		// await this.vault.adapter.write(this.path, this.toString());
 	}
 
 }
