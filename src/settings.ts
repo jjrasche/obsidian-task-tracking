@@ -1,5 +1,5 @@
 export const DEFAULT_SETTINGS: Settings = {
-    taskDataFileName: "data\\task-tracking.json",
+    taskDataFileName: "Data/task-tracking.json",
     onlyOneTaskActive: true
 };
 

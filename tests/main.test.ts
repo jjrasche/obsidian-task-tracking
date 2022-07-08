@@ -7,6 +7,7 @@ import { CompleteTaskTests } from "./complete.test";
 import { TaskDataType } from "task-data.service";
 import { DEFAULT_SETTINGS, Settings } from "settings";
 import { FileService } from "file.service";
+import { ModifyTaskService } from "modify-task.service";
 
 
 export const PLUGIN_NAME = "obsidian-task-tracking";
@@ -23,7 +24,12 @@ export default class TestTaskTrackingPlugin extends Plugin {
     settings: Settings;
     data_file: TFile;
     target_file: TFile;
+    mts : ModifyTaskService;
     file: FileService = new FileService(this.app);
+    statusBar: HTMLElement = {
+        firstChild: null,
+        createEl: () => {}
+    } as unknown as HTMLElement;
 
     // todo: try to code around this limitaion
     async load_settings(): Promise<void> {
@@ -142,6 +148,8 @@ export default class TestTaskTrackingPlugin extends Plugin {
         await this.file.modify(TARGET_FILE_NAME, fileContent);
         await this.file.modify(DATA_FILE_NAME, JSON.stringify(intialData));
         this.editor.setCursor(line);
+        this.mts = await (new ModifyTaskService(this.app, this.editor, this.settings, this.statusBar)).setup();
+        this.mts.tasks = (this.mts.tasks ?? []).filter(task => task.path == TARGET_FILE_NAME); // remove any tasks not in the test files
     }
     
     async expectTaskInData(expected: TaskDataType) {

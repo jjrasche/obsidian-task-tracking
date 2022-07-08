@@ -4,7 +4,7 @@ import { Link, STask } from "obsidian-dataview";
 import { SListItem } from "obsidian-dataview/lib/data-model/serialized/markdown";
 
 export class ManagedTask implements STask {
-	taskID: number;
+	taskID?: number;
 	inFocus: false;
 	// STask properties
 	task: true;
@@ -49,10 +49,10 @@ export class ManagedTask implements STask {
 		return ret;
 	}
 
-	private getTaskID(line: string): number {
+	private getTaskID(line: string): number | undefined {
 		const idMatch = line.match(/id:[0-9]+$/g);
 		const taskID = ((idMatch ?? [""])[0].match(/[0-9]+/) ?? [])[0];
-		return parseInt(taskID);
+		return !!taskID ? parseInt(taskID) : undefined;
 	}
 	
 	private getTaskText(line: string): string {
