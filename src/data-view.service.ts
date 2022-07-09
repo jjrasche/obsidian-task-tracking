@@ -1,4 +1,4 @@
-import { ManagedTask } from "model/activity-task";
+import { ManagedTask } from "model/managed-task";
 import { App, EditorPosition } from "obsidian";
 import { DataviewApi, getAPI, STask } from "obsidian-dataview";
 
@@ -19,7 +19,6 @@ export class DataViewService {
     }
 
     private getAllTasks(): STask[] {
-        app.workspace.containerEl
         const dv = getAPI(this.app) as DataviewApi;
         return dv.pages().file.tasks;
     }

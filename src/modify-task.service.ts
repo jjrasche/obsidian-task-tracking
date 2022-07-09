@@ -3,7 +3,7 @@ import { Status, StatusIndicator } from "model/status";
 import { isActive, TaskDataService, TaskDataType } from "task-data.service";
 import { App, Editor, EditorPosition, TFile, Vault } from "obsidian";
 import { Settings } from "settings";
-import { ManagedTask } from "./model/activity-task";
+import { ManagedTask } from "./model/managed-task";
 import { FileService } from "file.service";
 
 export class ModifyTaskService {
@@ -46,16 +46,16 @@ export class ModifyTaskService {
 		if (!!currentTask.taskID && !!this.tds.data[currentTask.taskID] && this.tds.data[currentTask.taskID].last()?.status === status) {
 			return;
 		}
+		if (!currentTask.taskID && status === Status.Active) {
+			currentTask.taskID = this.getNextTaskID();
+		}
 		// setting specific logic for only allowing 1 task active at a time
 		if (this.settings.onlyOneTaskActive && status === Status.Active) {
 			await this.inactivateAllActiveTasks();
 		}
-		if (!currentTask.taskID && status === Status.Active) {
-			currentTask.taskID = this.getNextTaskID();
-		}
 		await this.changeTaskStatus(currentTask.taskID as number, status);
+		this.modifyStatusBar(currentTask, status);
 		await this.tds.save();
-		this.modifyStatusBar(currentTask);
 		return currentTask;
 	}
 	
@@ -72,6 +72,8 @@ export class ModifyTaskService {
 		this.tds.addSession(taskID, status);
 		const sourceTask = this.tasks.find(task => task.taskID === taskID);
 		if (!sourceTask) {
+			// task is in data, but not in a file
+			// todo: consider if this scenario should cause failure
 			throw new Error(`could not find sourceTask with id:${taskID}`);
 		}
 		sourceTask.status = StatusIndicator[status];
@@ -80,13 +82,16 @@ export class ModifyTaskService {
 
 	private getNextTaskID(): number {
 		const keys = Object.keys(this.tds.data).sort();
-		const num = keys.length === 0 ? 0 : parseInt(Object.keys(this.tds.data).sort()[0]);
+		const newKey = Object.keys(this.tds.data).map(key => parseInt(key)).sort((a,b) => b - a)[0];
+		const num = keys.length === 0 ? 0 : newKey;
 		return num + 1;
 	}
 
-	private modifyStatusBar(currentTask: ManagedTask) {
+	private modifyStatusBar(currentTask: ManagedTask, status: Status) {
 		this.statusBar.firstChild?.remove();
-		this.statusBar.createEl("span", { text: currentTask.toString() });
+		if (this.settings.onlyOneTaskActive && status === Status.Active) {
+			this.statusBar.createEl("span", { text: currentTask.toString() });
+		}
 	}
 }
 

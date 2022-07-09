@@ -72,31 +72,31 @@ export function ActivateTaskTests(t: TestTaskTrackingPlugin) {
     t.test("next sequential taskID is selected", async() => {
         // arrange
         const fileContent = `- [ ] I am a task`;
-        const initialData = {[1]: [{time: new Date(), status: Status.Complete}]};
+        const initialData = {
+            [1]: [{time: new Date(), status: Status.Complete}],
+            [2]: [{time: new Date(), status: Status.Complete}]
+        };
         await t.setupTest(fileContent, initialData);
         // act
         await t.mts.changeCurrentTask(Status.Active);
         // assert 
-        const newData = { [2]: [{time: new Date(), status: Status.Active}]};
+        const newData = { [3]: [{time: new Date(), status: Status.Active}]};
         const expectedData = t.combineData(initialData, newData);
         await t.expectTaskInData(expectedData);
-        await t.expectTargetFile(`- [A] I am a task id:${2}`);
+        await t.expectTargetFile(`- [A] I am a task id:${3}`);
     });
-    
-    t.test("next sequential taskID is selected even if there is a gap in ids", async() => {
+
+    t.test("nested tasks are saved with proper indent", async() => {
         // arrange
-        const fileContent = `- [ ] I am a task`;
-        const initialData = {[1]: [{time: new Date(), status: Status.Complete}], [3]: [{time: new Date(), status: Status.Complete}]};
-        await t.setupTest(fileContent, initialData);
+        const fileContent = `- [ ] sibling id:5\n- [ ] parent id:1\n\t- [ ] child id:2\n\t\t- [ ] grandChild id:3\n\t\t\t- [ ] greatGrandChild id:4\n\t\t- [ ] grandChild2 id:6`;
+        const initialData = {};
+        await t.setupTest(fileContent, initialData, 3);
         // act
         await t.mts.changeCurrentTask(Status.Active);
         // assert
-        const newData = { [2]: [{time: new Date(), status: Status.Active}]};
-        const expectedData = t.combineData(initialData, newData);
-        await t.expectTaskInData(expectedData);
-        await t.expectTargetFile(`- [A] I am a task id:${2}`);
+        await t.expectTargetFile(`- [ ] sibling id:5\n- [ ] parent id:1\n\t- [ ] child id:2\n\t\t- [A] grandChild id:3\n\t\t\t- [ ] greatGrandChild id:4\n\t\t- [ ] grandChild2 id:6`);
     });
-    
+
     t.test("if onlyOneActive is true and another task is currently active, previously active task should have an inactive session added", async() => {
         // arrange
         const task1ID = 12345;

@@ -1,5 +1,5 @@
 import { FileService } from "file.service";
-import { Pos, Vault } from "obsidian";
+import { Pos } from "obsidian";
 import { Link, STask } from "obsidian-dataview";
 import { SListItem } from "obsidian-dataview/lib/data-model/serialized/markdown";
 
@@ -42,7 +42,8 @@ export class ManagedTask implements STask {
 	}
 	
 	public toString(): string {
-		let ret = `${this.symbol} [${this.status}] ${this.text?.trim()}`
+		const tabs = [...Array(this.position.start.col)].reduce((acc) => acc += "\t", "");
+		let ret = `${tabs}${this.symbol} [${this.status}] ${this.text?.trim()}`
 		if (!!this.taskID && !isNaN(this.taskID)) {
 			ret += ` id:${this.taskID}`;
 		}

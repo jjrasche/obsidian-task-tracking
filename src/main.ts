@@ -1,7 +1,8 @@
 import { ModifyTaskService } from 'modify-task.service';
 import { Status } from 'model/status';
-import { Editor, MarkdownView, Plugin } from 'obsidian';
+import { Editor, MarkdownView, Plugin, View } from 'obsidian';
 import { DEFAULT_SETTINGS, Settings } from 'settings';
+import { TaskTrackingView, VIEW_ID } from 'task-tracking-view';
 
 /*
 	functionality:
@@ -66,12 +67,16 @@ export default class TaskTrackingPlugin extends Plugin {
 		});
 		this.statusBar = this.addStatusBarItem();
 
-		// this.addRibbonIcon('up-arrow-with-tail', 'Activity Tracker Plugin', (evt: MouseEvent) => {});
+		// setup view
+		this.registerView(VIEW_ID, (leaf) => new TaskTrackingView(leaf));
+		this.addRibbonIcon("dice", "Activate view", () => this.activateView());
+
 		// this.registerDomEvent(document, 'click', (evt: MouseEvent) => {});
 		// this.registerInterval(window.setInterval(() => conole.log('setInterval'), 5 * 60 * 1000)); // When registering intervals, this function will automatically clear the interval when the plugin is disabled.
 	}
 
 	onunload() {
+		this.app.workspace.detachLeavesOfType(VIEW_ID);
 	}
 
 	async save_settings(): Promise<void> {
@@ -81,5 +86,13 @@ export default class TaskTrackingPlugin extends Plugin {
     async load_settings(): Promise<void> {
         this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
     }
+
+	async activateView() {
+		this.app.workspace.detachLeavesOfType(VIEW_ID);
+		await this.app.workspace.getLeaf(false).setViewState({ type: VIEW_ID, active: true });
+		this.app.workspace.revealLeaf(
+		  this.app.workspace.getLeavesOfType(VIEW_ID)[0]
+		);
+	  }
 }
 
