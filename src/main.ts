@@ -71,6 +71,9 @@ export default class TaskTrackingPlugin extends Plugin {
 		this.registerView(VIEW_ID, (leaf) => new TaskTrackingView(leaf));
 		this.addRibbonIcon("dice", "Activate view", () => this.activateView());
 
+		// testing run the activateveiw command initially
+		this.activateView();
+
 		// this.registerDomEvent(document, 'click', (evt: MouseEvent) => {});
 		// this.registerInterval(window.setInterval(() => conole.log('setInterval'), 5 * 60 * 1000)); // When registering intervals, this function will automatically clear the interval when the plugin is disabled.
 	}

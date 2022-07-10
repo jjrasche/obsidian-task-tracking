@@ -4,6 +4,7 @@
     "inlineSourceMap": true,
     "inlineSources": true,
     "module": "ESNext",
+    "jsx": "react",
     "target": "ES6",
     "allowJs": true,
     "noImplicitAny": true,
