@@ -11,3 +11,10 @@ export const StatusIndicator: { [key in Status]: string } = {
 	[Status.Paused]: "P",
 	[Status.Complete]: "C"
 }
+
+export const StatusWord: { [key in Status]: string } = {
+	[Status.Active]: "Active",
+	[Status.Inactive]: "Inactive",
+	[Status.Paused]: "Paused",
+	[Status.Complete]: "Complete"
+}

@@ -30,7 +30,13 @@ export class TaskDataService {
         const file = await this.file.createOrFind(this.settings.taskDataFileName);
         const data = await this.file.read(file);
         this.data = JSON.parse(data);
+        this.formatData();
         return this;
+    }
+
+    private formatData() {
+        Object.keys(this.data).forEach(key =>
+            this.data[key].forEach(session => session.time = new Date(session.time)));
     }
 
     addSession(taskID: number, status: Status) {
@@ -65,5 +71,4 @@ export class TaskDataService {
             return filter(taskID, sessions);
         });
     }
-
 }

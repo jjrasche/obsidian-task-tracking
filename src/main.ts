@@ -68,7 +68,7 @@ export default class TaskTrackingPlugin extends Plugin {
 		this.statusBar = this.addStatusBarItem();
 
 		// setup view
-		this.registerView(VIEW_ID, (leaf) => new TaskTrackingView(leaf));
+		this.registerView(VIEW_ID, (leaf) => new TaskTrackingView(leaf, this.app, this.settings));
 		this.addRibbonIcon("dice", "Activate view", () => this.activateView());
 
 		// testing run the activateveiw command initially

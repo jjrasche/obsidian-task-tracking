@@ -1,10 +1,11 @@
-import { ItemView, MarkdownRenderChild, WorkspaceLeaf } from "obsidian";
+import { App, ItemView, MarkdownRenderChild, WorkspaceLeaf } from "obsidian";
 import { DataviewApi, getAPI, STask } from "obsidian-dataview";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
-import { createRoot } from 'react-dom/client';
+import { createRoot, Root } from 'react-dom/client';
+import { Settings } from "settings";
 
-import { TaskTrackingReactView } from "./component/task-tracking-view";
+import{ DiceRoller, TaskTrackingReactView } from "./component/task-tracking-view";
 
 
 export const VIEW_ID = "task-tracking-view";
@@ -14,9 +15,12 @@ dv.table(['a', 'b', 'c'], dv.pages().file.tasks.values.map(t => [t.text, t.link.
 \`\`\``;
 
 export class TaskTrackingView extends ItemView {
-	dv: DataviewApi;
+	private reactComponent: React.ReactElement;
 
-	constructor(leaf: WorkspaceLeaf) {
+	dv: DataviewApi;
+	root: Root;
+
+	constructor(leaf: WorkspaceLeaf, app: App, private settings: Settings) {
 		super(leaf);
 	}
 
@@ -35,12 +39,14 @@ export class TaskTrackingView extends ItemView {
 		return "Task Tracking View";
 	}
 
+	// war story: https://stackoverflow.com/a/41897800/2109446
 	async onOpen() {
-		const root = createRoot(this.containerEl.children[1]!);
-		root.render(React.createElement(TaskTrackingReactView));   // war story: https://stackoverflow.com/a/41897800/2109446
+		console.log("1:\n" + JSON.stringify(this.settings));
+		this.root = createRoot(this.containerEl.children[1]!);
+		this.root.render(React.createElement(TaskTrackingReactView, {app: this.app, settings: this.settings}));
 	}
 
 	protected async onClose(): Promise<void> {
-		ReactDOM.unmountComponentAtNode(this.containerEl.children[1]);
+		this.root.unmount();
 	}
 }
