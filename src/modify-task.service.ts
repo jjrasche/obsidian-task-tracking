@@ -9,22 +9,21 @@ import { FileService } from "file.service";
 export class ModifyTaskService {
 	tds: TaskDataService;
 	tasks: ManagedTask[];
-	cursor: EditorPosition;
-	file: TFile;
+	cursor?: EditorPosition;
+	file: TFile | null;
 	fs: FileService;
 	isTask: boolean;
 
-	constructor(private app: App, private editor: Editor, private settings: Settings, private statusBar: HTMLElement) {
-	}
+	constructor(private app: App, private settings: Settings, private editor?: Editor, private statusBar?: HTMLElement) { }
 
 	async setup(): Promise<this> {
-		this.cursor = this.editor.getCursor();
-		const line = this.editor.getLine(this.cursor.line);
-		this.isTask = !!line.match(/^\t*- \[.{1}\]\s/g);
+		this.cursor = this.editor?.getCursor();
+		const line = !!this.cursor?.line ? this.editor?.getLine(this.cursor?.line) : undefined;
+		this.isTask = !!line ? !!line.match(/^\t*- \[.{1}\]\s/g) : true;
 		if (this.isTask) {
 			this.tds = await new TaskDataService(this.app, this.settings).setup();
-			this.file = this.app.workspace.getActiveFile() as TFile;
-			this.tasks = (new DataViewService(this.app)).getManagedTasks(this.file.path, this.cursor);
+			this.file = this.app.workspace.getActiveFile();
+			this.tasks = (new DataViewService(this.app)).getManagedTasks(this.file?.path, this.cursor);
 			this.fs = new FileService(this.app);
 		}
 		return this;
@@ -34,9 +33,9 @@ export class ModifyTaskService {
 		if (!this.isTask) {
 			return;
 		}
-		const currentTask = this.tasks.find(task => task.path == this.file?.path && task.line === this.cursor.line)
+		const currentTask = this.tasks.find(task => task.path == this.file?.path && task.line === this.cursor?.line)
 		if (!currentTask) {
-			throw Error(`could not find current task in file: ${this.file?.name} on line: ${this.cursor.line}`)
+			throw Error(`could not find current task in file: ${this.file?.name} on line: ${this.cursor?.line}`)
 		}
 		// only activate should allow for adding an id to a task without one
 		if (!currentTask.taskID && status !== Status.Active)	{
@@ -49,14 +48,18 @@ export class ModifyTaskService {
 		if (!currentTask.taskID && status === Status.Active) {
 			currentTask.taskID = this.getNextTaskID();
 		}
+		this.modifyandSaveExistingTask(currentTask, status);
+		return currentTask;
+	}
+
+	async modifyandSaveExistingTask(currentTask: ManagedTask, currentStatus: Status) {
 		// setting specific logic for only allowing 1 task active at a time
-		if (this.settings.onlyOneTaskActive && status === Status.Active) {
+		if (this.settings.onlyOneTaskActive && currentStatus === Status.Active) {
 			await this.inactivateAllActiveTasks();
 		}
-		await this.changeTaskStatus(currentTask.taskID as number, status);
-		this.modifyStatusBar(currentTask, status);
+		await this.changeTaskStatus(currentTask.taskID as number, currentStatus);
+		this.modifyStatusBar(currentTask, currentStatus);
 		await this.tds.save();
-		return currentTask;
 	}
 	
 	// data is the source of truth
@@ -68,7 +71,7 @@ export class ModifyTaskService {
 		}
 	}
 	
-	private async changeTaskStatus(taskID: number, status: Status) {
+	async changeTaskStatus(taskID: number, status: Status) {
 		this.tds.addSession(taskID, status);
 		const sourceTask = this.tasks.find(task => task.taskID === taskID);
 		if (!sourceTask) {
@@ -88,9 +91,9 @@ export class ModifyTaskService {
 	}
 
 	private modifyStatusBar(currentTask: ManagedTask, status: Status) {
-		this.statusBar.firstChild?.remove();
+		this.statusBar?.firstChild?.remove();
 		if (this.settings.onlyOneTaskActive && status === Status.Active) {
-			this.statusBar.createEl("span", { text: currentTask.toString() });
+			this.statusBar?.createEl("span", { text: currentTask.toString() });
 		}
 	}
 }

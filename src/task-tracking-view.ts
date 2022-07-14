@@ -5,7 +5,7 @@ import * as ReactDOM from "react-dom";
 import { createRoot, Root } from 'react-dom/client';
 import { Settings } from "settings";
 
-import{ DiceRoller, TaskTrackingReactView } from "./component/task-tracking-view";
+import{ TaskTrackingReactView } from "./component/task-tracking-view";
 
 
 export const VIEW_ID = "task-tracking-view";
@@ -41,7 +41,7 @@ export class TaskTrackingView extends ItemView {
 
 	// war story: https://stackoverflow.com/a/41897800/2109446
 	async onOpen() {
-		console.log("1:\n" + JSON.stringify(this.settings));
+		console.log(`${this.containerEl.children[1]!}`);
 		this.root = createRoot(this.containerEl.children[1]!);
 		this.root.render(React.createElement(TaskTrackingReactView, {app: this.app, settings: this.settings}));
 	}
