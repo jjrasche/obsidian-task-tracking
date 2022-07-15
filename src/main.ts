@@ -40,7 +40,7 @@ export default class TaskTrackingPlugin extends Plugin {
 				if (!!check) {
 					return !!editor;
 				}
-				(new ModifyTaskService(this.app, editor, this.settings, this.statusBar)).setup().then(mts => mts.changeCurrentTask(Status.Active));
+				(new ModifyTaskService(this.app, this.settings, editor, this.statusBar)).setup().then(mts => mts.changeCurrentTask(Status.Active));
 			}
 		});
 		this.addCommand({
@@ -51,7 +51,7 @@ export default class TaskTrackingPlugin extends Plugin {
 				if (!!check) {
 					return !!editor;
 				}
-				(new ModifyTaskService(this.app, editor, this.settings, this.statusBar)).setup().then(mts => mts.changeCurrentTask(Status.Inactive));
+				(new ModifyTaskService(this.app, this.settings, editor, this.statusBar)).setup().then(mts => mts.changeCurrentTask(Status.Inactive));
 			}
 		});
 		this.addCommand({
@@ -62,7 +62,7 @@ export default class TaskTrackingPlugin extends Plugin {
 				if (!!check) {
 					return !!editor;
 				}
-				(new ModifyTaskService(this.app, editor, this.settings, this.statusBar)).setup().then(mts => mts.changeCurrentTask(Status.Complete));
+				(new ModifyTaskService(this.app, this.settings, editor, this.statusBar)).setup().then(mts => mts.changeCurrentTask(Status.Complete));
 			}
 		});
 		this.statusBar = this.addStatusBarItem();

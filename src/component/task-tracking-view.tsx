@@ -195,7 +195,7 @@ export function TaskTrackingReactView({ app, settings }: { app: App, settings: S
 	const [taskSources, setTaskSource] = useState<ManagedTask[]>([]);
 	const [mts, setMTS] = useState<ModifyTaskService>();
 	const [sorting, setSorting] = React.useState<SortingState>([{id: "lastActive", desc: true}])
-	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
+	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([{id: "status", value: "active"}])
 
 	useEffect(() => {
 		setTaskSource(dvs.getManagedTasks())

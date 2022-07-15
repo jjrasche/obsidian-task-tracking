@@ -14,7 +14,7 @@ export const StatusIndicator: { [key in Status]: string } = {
 
 export const StatusWord: { [key in Status]: string } = {
 	[Status.Active]: "Active",
-	[Status.Inactive]: "Inactive",
+	[Status.Inactive]: "Inactve",
 	[Status.Paused]: "Paused",
 	[Status.Complete]: "Complete"
 }
