@@ -1,4 +1,4 @@
-import { App } from "obsidian";
+import { App, MarkdownView } from "obsidian";
 import { Session } from "model/session";
 import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
@@ -66,6 +66,7 @@ export class RowData {
 	numSwitches: number;
 	fileName?: string;
 	tags: string[];
+	line?: number;
 };
 
 function convertToList(data: TaskDataType, tasks: ManagedTask[]): RowData[] {
@@ -100,7 +101,8 @@ function convertToList(data: TaskDataType, tasks: ManagedTask[]): RowData[] {
 			timeToClose: (!!last && last.status === Status.Complete) ? ((last.time.getTime() - first.time.getTime()) / 1000) : undefined,
 			numSwitches: sessions.filter(session => session.status === Status.Active).length,
 			fileName: matchingTask?.path,
-			tags: !!matchingTask?.text ? [...matchingTask?.text.matchAll(/#[^\s]*/g)].map(f => f[0].replace("#", "")) : []
+			tags: !!matchingTask?.text ? [...matchingTask?.text.matchAll(/#[^\s]*/g)].map(f => f[0].replace("#", "")) : [],
+			line: matchingTask?.line
 		};
 	});
 }
@@ -164,30 +166,19 @@ export const TimeFormatter = (cell: any): JSX.Element => {
 	return `${!!days ? days.toString() + ':' : ''}${!!hours ? hours.toString() + ':' : ''}${!!minutes ? minutes.toString() + ':' : ''}${sec}` as any;
 }
 
-const filterFn: FilterFn<any> = (row, columnId, value, addMeta) => {
-	let val: any = row.getValue(columnId);
-	const columnDef = columns.find((col: any) => col.accessorKey === columnId);
-	const cell = row.getAllCells().find(cell => cell.column.id === columnId)
-	if (!!columnDef && !!columnDef.cell) {
-		val = columnDef.cell(cell);
+const navigate = (app: App, cell: any) => {
+	const row = cell.row.original as RowData;
+	if (!!row) {
+		app.workspace.openLinkText("", row.fileName ?? "").then(() => {
+			const view = app.workspace.getActiveViewOfType(MarkdownView);
+			const editor = view?.editor;
+			console.log(editor);
+			if (!!editor) {
+				editor.scrollIntoView({ from: {line: row.line ?? 0, ch: 0}, to: {line: row.line ?? 0, ch: 0}}, true);
+			}
+		}); 
 	}
-	return val.toString().toLowerCase().contains(value);
 }
-
-// id, text, start, end, time spent, ttc
-const columns: ColumnDef<RowData>[] = [
-	// { header: 'ID', accessorKey: 'id' },
-	{ header: 'Status', accessorKey: 'status', cell: (cell: any) => StatusWord[cell.getValue() as Status], filterFn  },
-	{ header: 'Text', accessorKey: 'text' },
-	// { header: 'First', accessorKey: 'start', cell: DateFormatter },
-	// { header: 'Last', accessorKey: 'end' , cell: DateFormatter },
-	{ header: 'Recent', accessorKey: 'lastActive' , cell: DateFormatter, filterFn },
-	{ header: 'Tags', accessorKey: 'tags', cell: ArrayFormatter, filterFn },
-	{ header: 'Time Spent', accessorKey: 'timeSpent', cell: TimeFormatter, filterFn },
-	{ header: 'Time To Close', accessorKey: 'timeToClose', cell: TimeFormatter, filterFn },
-	{ header: '# Switches', accessorKey: 'numSwitches', filterFn },
-	{ header: 'File', accessorKey: 'fileName', cell: (cell: any) => <a href={`obsidian://open?vault=everything&file=${cell.row.original.fileName}`}>{cell.getValue()}</a>, filterFn },
-];
 
 export function TaskTrackingReactView({ app, settings }: { app: App, settings: Settings }): JSX.Element {
 	const [taskData, setTaskData] = useState<RowData[]>([]);
@@ -196,6 +187,30 @@ export function TaskTrackingReactView({ app, settings }: { app: App, settings: S
 	const [mts, setMTS] = useState<ModifyTaskService>();
 	const [sorting, setSorting] = React.useState<SortingState>([{id: "lastActive", desc: true}])
 	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([{id: "status", value: "active"}])
+
+	const filterFn: FilterFn<any> = (row, columnId, value, addMeta) => {
+		let val: any = row.getValue(columnId);
+		const columnDef = columns.find((col: any) => col.accessorKey === columnId);
+		const cell = row.getAllCells().find(cell => cell.column.id === columnId)
+		if (!!columnDef && !!columnDef.cell) {
+			val = columnDef.cell(cell);
+		}
+		return val.toString().toLowerCase().contains(value);
+	}
+	
+	const columns: ColumnDef<RowData>[] = [
+		// { header: 'ID', accessorKey: 'id' },
+		{ header: 'Status', accessorKey: 'status', cell: (cell: any) => StatusWord[cell.getValue() as Status], filterFn  },
+		{ header: 'Text', accessorKey: 'text' },
+		// { header: 'First', accessorKey: 'start', cell: DateFormatter },
+		// { header: 'Last', accessorKey: 'end' , cell: DateFormatter },
+		{ header: 'Recent', accessorKey: 'lastActive' , cell: DateFormatter, filterFn },
+		{ header: 'Tags', accessorKey: 'tags', cell: ArrayFormatter, filterFn },
+		{ header: 'Time Spent', accessorKey: 'timeSpent', cell: TimeFormatter, filterFn },
+		{ header: 'Time To Close', accessorKey: 'timeToClose', cell: TimeFormatter, filterFn },
+		{ header: '# Switches', accessorKey: 'numSwitches', filterFn },
+		{ header: 'File', accessorKey: 'fileName', cell: (cell: any) => <a onClick={() => navigate(app, cell)}>{cell.getValue()}</a>, filterFn },
+	];
 
 	useEffect(() => {
 		setTaskSource(dvs.getManagedTasks())
@@ -222,12 +237,12 @@ export function TaskTrackingReactView({ app, settings }: { app: App, settings: S
 				return;
 			}
 			await mts?.modifyandSaveExistingTask(currentTask, Status.Active);
-			setTaskSource(dvs.getManagedTasks());
+			refresh();
 		}
 	}
 
 	const refresh = () => {
-		// todo
+		setTaskSource(dvs.getManagedTasks());
 	}
 
 	// const table = useMemo(() => useReactTable({ data: taskData, columns, getCoreRowModel: getCoreRowModel() }), [taskData]);
@@ -246,6 +261,7 @@ export function TaskTrackingReactView({ app, settings }: { app: App, settings: S
 	} else {
 		return (
 			<Styles>
+				<button onClick={refresh}>Refresh</button>
 				<table>
 					<thead>{table.getHeaderGroups().map(headerGroup => (
 						<tr key={headerGroup.id}>{headerGroup.headers.map(header => (

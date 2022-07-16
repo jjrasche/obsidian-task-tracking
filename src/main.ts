@@ -72,7 +72,7 @@ export default class TaskTrackingPlugin extends Plugin {
 		this.addRibbonIcon("dice", "Activate view", () => this.activateView());
 
 		// testing run the activateveiw command initially
-		this.activateView();
+		// this.activateView();
 
 		// this.registerDomEvent(document, 'click', (evt: MouseEvent) => {});
 		// this.registerInterval(window.setInterval(() => conole.log('setInterval'), 5 * 60 * 1000)); // When registering intervals, this function will automatically clear the interval when the plugin is disabled.
@@ -87,14 +87,14 @@ export default class TaskTrackingPlugin extends Plugin {
     }
 
     async load_settings(): Promise<void> {
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData()); 
     }
 
 	async activateView() {
 		this.app.workspace.detachLeavesOfType(VIEW_ID);
-		await this.app.workspace.getLeaf(false).setViewState({ type: VIEW_ID, active: true });
+		await this.app.workspace.getLeaf(true, 'horizontal').setViewState({ type: VIEW_ID, active: true });
 		this.app.workspace.revealLeaf(
-		  this.app.workspace.getLeavesOfType(VIEW_ID)[0]
+			this.app.workspace.getLeavesOfType(VIEW_ID)[0]
 		);
 	  }
 }
