@@ -1,4 +1,4 @@
-import { FileService } from "file.service";
+import { ObsidianFileService } from "obsidian-file.service";
 import { Pos } from "obsidian";
 import { Link, STask } from "obsidian-dataview";
 import { SListItem } from "obsidian-dataview/lib/data-model/serialized/markdown";
@@ -61,7 +61,7 @@ export class ManagedTask implements STask {
 		return text;
 	}
 	
-	async modifyTaskSourceFile(fs: FileService) {
+	async modifyTaskSourceFile(fs: ObsidianFileService) {
 		const file = fs.find(this.path);
 		let originalContent = await fs.read(file);
 		const lines = originalContent.split("\n")

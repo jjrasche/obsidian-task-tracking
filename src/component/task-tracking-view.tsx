@@ -186,7 +186,7 @@ export function TaskTrackingReactView({ app, settings }: { app: App, settings: S
 	const [taskSources, setTaskSource] = useState<ManagedTask[]>([]);
 	const [mts, setMTS] = useState<ModifyTaskService>();
 	const [sorting, setSorting] = React.useState<SortingState>([{id: "lastActive", desc: true}])
-	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([{id: "status", value: "active"}])
+	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([{ id: "lastActive", value: (new Date()).toLocaleDateString("en-US", {month: 'short', day: '2-digit' }) }])
 
 	const filterFn: FilterFn<any> = (row, columnId, value, addMeta) => {
 		let val: any = row.getValue(columnId);
@@ -195,7 +195,7 @@ export function TaskTrackingReactView({ app, settings }: { app: App, settings: S
 		if (!!columnDef && !!columnDef.cell) {
 			val = columnDef.cell(cell);
 		}
-		return val.toString().toLowerCase().contains(value);
+		return val.toString().toLowerCase().contains(value.toLowerCase());
 	}
 	
 	const columns: ColumnDef<RowData>[] = [
@@ -236,7 +236,8 @@ export function TaskTrackingReactView({ app, settings }: { app: App, settings: S
 				console.error(`could not find task in source with ID ${row.id}`);
 				return;
 			}
-			await mts?.modifyandSaveExistingTask(currentTask, Status.Active);
+			const updatedStatus = mts?.clickStatusChange(row.status) ?? Status.Active;
+			await mts?.modifyandSaveExistingTask(currentTask, updatedStatus);
 			refresh();
 		}
 	}

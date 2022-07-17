@@ -1,41 +1,14 @@
+import { readFile, readFileSync, realpath, write, writeFile, writeFileSync } from "fs";
 import { App, TFile } from "obsidian";
 
 export class FileService {
-	constructor(private app: App) {}
+	constructor() {}
 
-	find(fileName: string, attempt = false): TFile {
-		const f = this.app.vault.getFiles().find((f: TFile) => f.path.contains(fileName));
-		if (!attempt && !f) {
-			throw Error(`file ${fileName} not found.`);
-		}
-		return f as TFile;
+	find(fileName: string, attempt = false): string {
+		return readFileSync("C:\\Users\\rasche_j\\Documents\\everything\\Data\\task-tracking.json", 'utf-8');
 	}
-	
-	async tryDelete(app: App, file: TFile): Promise<boolean> {
-		try {
-			await app.vault.delete(file);
-			return true;
-		} catch (e) {
-			return false;
-		}
-	}
-	
-	async createOrFind(fileName: string): Promise<TFile> {
-		try {
-			return await this.app.vault.create(fileName, "");
-		} catch(e) {
-			return this.find(fileName);
-		}
-	}
-	
-	async read(file: TFile): Promise<string> {
-		return this.app.vault.read(file);
-	}
-	
-	async modify(fileName: string, file_content: string = "") {
-		const f = this.find(fileName);
-		if (f && f instanceof TFile) {
-			await this.app.vault.modify(f, file_content);
-		}
+
+	save(fileName: string, fileContent: string) {
+		writeFileSync("C:\\Users\\rasche_j\\Documents\\everything\\Data\\task-tracking.json", fileContent);
 	}
 }

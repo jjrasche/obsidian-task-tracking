@@ -6,7 +6,7 @@ import { ActivateTaskTests } from "./activate.test";
 import { CompleteTaskTests } from "./complete.test";
 import { TaskDataType } from "task-data.service";
 import { DEFAULT_SETTINGS, Settings } from "settings";
-import { FileService } from "file.service";
+import { ObsidianFileService } from "obsidian-file.service";
 import { ModifyTaskService } from "modify-task.service";
 
 
@@ -25,7 +25,7 @@ export default class TestTaskTrackingPlugin extends Plugin {
     data_file: TFile;
     target_file: TFile;
     mts : ModifyTaskService;
-    file: FileService = new FileService(this.app);
+    file: ObsidianFileService = new ObsidianFileService(this.app);
     statusBar: HTMLElement = {
         firstChild: null,
         createEl: () => {}

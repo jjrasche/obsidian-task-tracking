@@ -1,8 +1,10 @@
-import { FileService } from "file.service";
+import { ObsidianFileService } from "obsidian-file.service";
 import { Status } from "model/status";
 import { App } from "obsidian";
 import { Settings } from "settings";
 import { Session } from "./model/session";
+import { FileService } from "file.service";
+import { ManagedTask } from "model/managed-task";
 
 export type TaskDataType = {[key: string]: Session[]};
 
@@ -23,12 +25,11 @@ export class TaskDataService {
     file: FileService;
 
     constructor(private app: App, private settings: Settings) {
-        this.file = new FileService(app);
+        this.file = new FileService();
     }
 
     async setup(): Promise<this> {
-        const file = await this.file.createOrFind(this.settings.taskDataFileName);
-        const data = await this.file.read(file);
+        const data = this.file.find(this.settings.taskDataFileName);
         this.data = JSON.parse(data);
         this.formatData();
         return this;
@@ -57,10 +58,7 @@ export class TaskDataService {
 
     async save() {
         const dataString = JSON.stringify(this.data);
-        // todo: test if all 3 steps are needed to ave
-        const file = await this.file.createOrFind(this.settings.taskDataFileName);
-        await this.file.tryDelete(this.app, file);
-        await this.app.vault.create(this.settings.taskDataFileName, dataString);
+        this.file.save("", dataString);
     }
     
     getTaskIDs(filter: TaskFilter): number[] {
@@ -70,5 +68,19 @@ export class TaskDataService {
             const sessions = this.data[taskID];
             return filter(taskID, sessions);
         });
+    }
+
+    getMostRecentID(): number | undefined {
+        let mostRecentID = "";
+        let mostRecentTime: Date = new Date(0);
+        Object.keys(this.data).forEach(id => {
+            this.data[id].forEach(session => {
+                if (session.time > mostRecentTime) {
+                    mostRecentTime = session.time;
+                    mostRecentID = id;
+                }
+            });
+        });
+        return parseInt(mostRecentID); 
     }
 }
