@@ -1,5 +1,4 @@
-import { readFile, readFileSync, realpath, write, writeFile, writeFileSync } from "fs";
-import { App, TFile } from "obsidian";
+import { readFileSync, writeFileSync } from "node:fs";
 
 export class FileService {
 	constructor() {}
