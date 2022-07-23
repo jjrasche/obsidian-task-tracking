@@ -3,9 +3,10 @@ import { DataviewApi, getAPI, STask } from "obsidian-dataview";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 import { createRoot, Root } from 'react-dom/client';
-import { Settings } from "settings";
 
 import{ TaskTrackingReactView } from "./component/task-tracking-view";
+import * as settings from 'state/settings.state';
+import * as app from 'state/app.state';
 
 
 export const VIEW_ID = "task-tracking-view";
@@ -20,7 +21,7 @@ export class TaskTrackingView extends ItemView {
 	dv: DataviewApi;
 	root: Root;
 
-	constructor(leaf: WorkspaceLeaf, app: App, private settings: Settings) {
+	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
 	}
 
@@ -43,7 +44,7 @@ export class TaskTrackingView extends ItemView {
 	async onOpen() {
 		console.log(`${this.containerEl.children[1]!}`);
 		this.root = createRoot(this.containerEl.children[1]!);
-		this.root.render(React.createElement(TaskTrackingReactView, {app: this.app, settings: this.settings}));
+		this.root.render(React.createElement(TaskTrackingReactView, {app: app.get(), settings: settings.get() }));
 	}
 
 	protected async onClose(): Promise<void> {

@@ -20,3 +20,71 @@ could create a view
     await this.app.workspace.getLeaf().openFile(this.target_file);
     this.editor.setCursor(line);
   ```
+
+## Data Flow
+  - triggers
+    - command: Specify new state - A, I, C
+    - Toggle: switch between Active and inactive 
+      - click status bar
+      - click view row
+  - objects
+    - data: {id: sessions[{time, status}]}
+    - source: {text, status, id }
+  - effects 
+    - update status bar
+    - write data
+    - modify source task
+  - functionality
+    - getTasks: for output
+    - get specific task(s) (most recently changed, all active)
+    - update task (data + source)
+      - update data: 1) add new session to task, 2) overwrite file
+      - update source 2) update task line, 2) save file 
+    - set statusbar
+    - inactivate all active tasks
+    - getNextTaskID
+    - reconcile source and data: change the source status to match data status
+  - files
+    <!-- - Singleton Services -> allow for global state with the ability to mock 
+      - App: get/set
+      - settings: get/set
+      - statusBar
+      -->
+    - ModifyTask (functions)
+      - updateTaskFromEditor(app, editor): tries to get task from editor cursor, if task not tracked then adds to s
+      - updateTaskFromClick(taskID): handles interaction with tasks when done by clicking (toggle)
+      - changeTaskStatus(taskID, status): handles potential inactivating of all active tasks, calls statusBar change
+    - Tas: create and manage tasks data
+      - tasks: Task[]
+      - constructor: create tasks object
+      - getMostRecent(): Task
+      - getAllActive(): Task[]
+      - toData(): {[id: number]: Session[]}
+      - saveChange(): update source, update data
+    - TaskSourceService:
+      - getAllTasks: using dataService, only tasks with the " id: ##" pattern
+      * setup listeners on files to update tasks
+    - TaskDataService:
+      - getData(): {[id: number]: Session[]}
+      - save(data: {[id: number]: Session[]})
+    - FileService: readFile, overwriteFile 
+      - ? if I change a file via `fs` will it trigger dataview update?
+    - StatusBar: setStatusBar, initialize
+    - task.model.ts: plain object
+      - dirty bit;
+      - toView(): ViewData
+    - view-data.mode.ts: plain object
+    - global data: private global data with setter and getter (app, settings, statusBar)
+      - tasks: get, set, initialize
+
+## Considerations
+- batch task changes for data 
+- atomic updates. may not be necessary as if source and data are out of sync, data takes precidence
+- when do I need to refresh data
+  - source: since text can change outside this application, need to update before every action
+    - optimization might be able to listen to file changes to not have to reload sources  
+  - data: only being modified by this application, so don't need to update it except on load 
+
+
+## Questions
+? does it make sense to keep a manageTask.sessions separate from taskData? as when modifying we will need the entire object anyway? A:
