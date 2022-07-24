@@ -19,7 +19,7 @@ export const getByCursor = (path: string = "", cursor: EditorPosition): STask =>
 export const save = async (tasks: Task[]) => {
     const dirtyTasks = tasks.filter(task => task.dirty);
     for(const task of dirtyTasks) {
-        let originalContent = await file.readByPath(task.path);
+        let originalContent = await file.read(task.path);
         const lines = originalContent.split("\n")
         lines[task.line] = task.toString();
         const updatedContent = lines.join("\n");

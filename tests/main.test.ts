@@ -1,8 +1,8 @@
-import { Editor, MarkdownView, Plugin, TFile } from "obsidian";
+import { Editor, FileSystemAdapter, MarkdownView, Plugin, TFile } from "obsidian";
 import { expect } from "chai";
 import { Session } from "model/session";
 import { DEFAULT_SETTINGS, Settings } from "settings";
-import { createOrFind, read, write } from "service/file.service";
+import { remove, read, write, find } from "service/file.service";
 import { UpdateTaskFromEditorTests } from "./update-task-from-editor.test";
 import * as app from 'state/app.state';
 import * as settings from 'state/settings.state';
@@ -22,8 +22,6 @@ export default class TestTaskTrackingPlugin extends Plugin {
     tests: Array<{ name: string; suite?: string; fn: () => Promise<void> }>;
     // plugin: TaskTrackingPlugin;
     // settings: Settings;
-    data_file: TFile;
-    target_file: TFile;
     statusBar: HTMLElement = {
         firstChild: null,
         createEl: () => {}
@@ -34,34 +32,44 @@ export default class TestTaskTrackingPlugin extends Plugin {
     //     this.settings = Object.assign({}, DEFAULT_SETTINGS);
     // }
 
-    async onload() {
-        // await this.load_settings();
-        settings.set(Object.assign({}, DEFAULT_SETTINGS, await this.loadData()));
-        // if I see the file already created error and it cannot be found try
-        await (this.app.metadataCache as any).clear();
-        await this.run();
+    /*
+        war story, I was having seemingly random failures when trying to access a file I had just created.
+        The issue was timing. The Obsidian App had not yet initialized the vault when I created the files
+        this means they were never added to the vault.root.children and could not be referenced in the test.
+        might need to increase the timeout for larger vaults
+    */
+    async onload() { 
+        setTimeout(() => {
+            // await this.load_settings();
+            settings.set(Object.assign({}, DEFAULT_SETTINGS));
+            // if I see the file already created error and it cannot be found try
+            // await (this.app.metadataCache as any).clear(); // doesn't seem to help
+            app.set(this.app);
+            if(!(app.get().vault.adapter instanceof FileSystemAdapter)) {
+                throw new Error("adapter must be a file system");
+            }
+            this.run(); 
+        }, 3000);
     }
 
     async run() {
-        await this.setup();
+        // await this.setup();
         await this.load_tests();
         await this.run_tests();
         await this.teardown();
     }
 
     async setup() {
-        this.tests = new Array();
-		app.set(this.app);
 		statusBar.set(this.addStatusBarItem());
-        this.target_file = await createOrFind(TARGET_FILE_NAME);
-        this.data_file = await createOrFind(DATA_FILE_NAME);
         settings.get().taskDataFileName = DATA_FILE_NAME;
-        await this.app.workspace.getLeaf().openFile(this.target_file);  // replicates the use case of interacting with a file in editor
+        // todo: still need to get the TFile somehow, maybe I can create it myself
+        const file = find(TARGET_FILE_NAME);
+        await this.app.workspace.getLeaf().openFile(file);  // replicates the use case of interacting with a file in editor
     }
 
     async teardown() {
-        await this.app.vault.delete(this.target_file, true);
-        await this.app.vault.delete(this.data_file, true);
+        await remove(TARGET_FILE_NAME);
+        await remove(DATA_FILE_NAME);
     }
 
     async disable_external_plugins() {
@@ -81,6 +89,7 @@ export default class TestTaskTrackingPlugin extends Plugin {
     }
 
     async load_tests() {
+        this.tests = new Array();
         await this.loadTestSuite(UpdateTaskFromEditorTests)
         await this.loadTestSuite(taskModelTests);
         const focusedTests = this.tests.filter(t => t.name.startsWith("fff"));
@@ -132,7 +141,7 @@ export default class TestTaskTrackingPlugin extends Plugin {
     }
 
     async getData(): Promise<TaskDataType> {
-        const dataString = await read(this.data_file);
+        const dataString = await read(DATA_FILE_NAME);
         const data = JSON.parse(dataString);
         Object.keys(data).forEach(key => {
             data[key].forEach((session: Session) => {
@@ -148,6 +157,7 @@ export default class TestTaskTrackingPlugin extends Plugin {
     async setupEditorTest(fileContent: string, intialData = {}, line = 0) {
         await write(TARGET_FILE_NAME, fileContent);
         await write(DATA_FILE_NAME, JSON.stringify(intialData));
+        await this.setup();
         this.editor.setCursor(line);
     }
     
@@ -161,11 +171,17 @@ export default class TestTaskTrackingPlugin extends Plugin {
             actualSessions.forEach((actualSession, idx) => {    // each session
                 const expectedSession = expectedSessions[idx];
                 expect(actualSession.status).to.eql(expectedSession.status);
-                expect(actualSession.time)      // actual time should be before expected time
-                    .greaterThan(new Date(expectedSession.time.getTime() - 2000))  
-                    .lessThan(new Date(expectedSession.time.getTime() + 500));
+                this.expectTimeInRange(actualSession.time);
             });
         });        
+    }
+
+    
+
+    expectTimeInRange(actual: Date, lowerBound = 1000, upperBound = 100) {
+        expect(actual)      // actual time should be before expected time
+            .greaterThan(new Date(actual.getTime() - lowerBound))
+            .lessThan(new Date(actual.getTime() + upperBound));
     }
     
     /*
@@ -184,13 +200,13 @@ export default class TestTaskTrackingPlugin extends Plugin {
     }
 
     async expectTargetFile(expectedFileContent: string) {
-        const targetFile = await read(this.target_file);
+        const targetFile = await read(TARGET_FILE_NAME);
         expect(targetFile).to.eql(expectedFileContent);     // taskID added to selected task
     }
     
     async expectNoChanges(fileContent: string, initialData = {}) {
         const data = await this.getData();
         await expect(JSON.stringify(data)).to.eql(JSON.stringify(initialData));  // data file unchanged 
-        expect(await read(this.target_file)).to.eql(fileContent) // target file unchanged
+        expect(await read(TARGET_FILE_NAME)).to.eql(fileContent) // target file unchanged
     }
 }

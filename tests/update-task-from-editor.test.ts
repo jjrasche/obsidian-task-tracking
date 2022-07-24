@@ -27,7 +27,7 @@ export function UpdateTaskFromEditorTests(t: TestTaskTrackingPlugin) {
         // assert
         expect(tasks.get()).to.eql([]);
     })
-    t.test("if current task is same status, do nothing", async() => {
+    t.test("fffif current task is same status, do nothing", async() => {
         // arrange
         const taskID = 12345;
         const fileContent = `- [C] I am a task without an ID id:${taskID}`;
@@ -36,7 +36,7 @@ export function UpdateTaskFromEditorTests(t: TestTaskTrackingPlugin) {
         // act
         await updateTaskFromEditor(t.editor, Status.Complete);
         // assert
-        await t.expectNoChanges(fileContent, initialData);
+        await t.expectNoChanges(fileContent, initialData); 
      });
 
     t.test("source task with no id will create new task in Tasks", async () => {

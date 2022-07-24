@@ -2,48 +2,49 @@ import { TFile } from "obsidian";
 import * as app from 'state/app.state';
 
 
+/*
+ war story: non deterministically, the vault.getFiles() method would not find my test files. 
+ I dug into the code and got to about this point `return [2, this.fsPromises.readFile(t, "utf8")]` trying to understand
+	why the root.children did not contain the test files. 
+	Chose to switch to adapter, but still need to get the TFile somehow
+*/
 export const find = (fileName: string, attempt = false): TFile => {
 	const f = app.get().vault.getFiles().find((f: TFile) => f.path.contains(fileName));
 	if (!attempt && !f) {
-		throw Error(`file ${fileName} not found.`);
+		throw Error(`file ${fileName} not found.`);  
 	}
 	return f as TFile;
 }
 
-export const tryDelete = async(file: TFile): Promise<boolean> => {
+export const remove = async(path: string): Promise<boolean> => {
 	try {
-		await app.get().vault.delete(file);
+		await app.adapter().remove(path);
 		return true;
 	} catch (e) {
 		return false;
 	}
 }
 
-export const createOrFind = async(fileName: string): Promise<TFile> => {
-	try {
-		// why does this think the file is already created?
-		// Object.keys(app.get().vault.fileMap).map(key => app.get().vault.fileMap[key]).filter(f => f.deleted === true)
+// export const create = async(fileName: string): Promise<TFile> => {
+	
+// 	// await new Promise(r => setTimeout(r, 200));
+// 	// try { return await app.get().vault.create(fileName, "") } catch(e) { }
+// 	// await new Promise(r => setTimeout(r, 200));
+// 	// try { return await app.get().vault.create(fileName, "") } catch(e) { }
+// 	// await new Promise(r => setTimeout(r, 200));
+// 	try {
+// 		app.adapter().write("");
+// 	} catch(e) {
+// 		return await find(fileName)      
+// 	}
+// }
 
-		return await app.get().vault.create(fileName, "");
-	} catch(e) {
-		return find(fileName);
-	}
+export const read = async(path: string): Promise<string> => {
+	return await app.adapter().read(path);
 }
 
-export const read = async(file: TFile): Promise<string> => {
-	return app.get().vault.read(file);
-}
-
-export const readByPath = async(path: string): Promise<string> => {
-	const file = find(path);
-	return app.get().vault.read(file);
-}
-
-export const write = async(fileName: string, file_content: string = "") => {
-	const f = find(fileName);
-	if (f && f instanceof TFile) {
-		await app.get().vault.modify(f, file_content);
-	}
+export const write = async(path: string, content: string = "") => {
+	await app.adapter().write(path, content); 
 }
 
 // // import { readFileSync, writeFileSync } from "node:fs";
@@ -68,6 +69,6 @@ export const write = async(fileName: string, file_content: string = "") => {
 // }
 
 
-// // export const find = (fileName: string, fileContent: string) => {
+// // export const await find = (fileName: string, fileContent: string) => {
 // // 	fs.find(fileName, fileContent);
 // // }

@@ -1,17 +1,27 @@
 import TestTaskTrackingPlugin from "./main.test";
 import { Status } from "model/status";
 import { expect } from "chai";
-import { updateTaskFromEditor } from "service/modify-task.service";
-import * as tasks from 'state/tasks.state';
 import { STask } from "obsidian-dataview";
 import { getTaskText, getTaskTextID, Task } from "model/task.model";
-// import proxyquire from 'proxyquire';
-import rewiremock from 'rewiremock';
 
-import * as date from 'service/date.service';
 /*
-    getTaskText
-    getTaskTextID
+    hard to truly stub an exported function. I don't understand this fully
+    https://dev.to/thekashey/please-stop-playing-with-proxyquire-11j4
+    todo: understand the pattern for stubbing in TS
+
+            // debugger;
+        // const Task = proxyquire('../model/task.model', {
+        //     './service/date.service': {
+        //       default: function now() { return new Date(0)},
+        //     },
+        //   }).default;
+        // debugger;
+        // import * as date from 'service/date.service';
+
+        // const myTestableFile = rewiremock(() => require('../model/task.model'), () => {
+        //     rewiremock(() => require('service/date.service')).with(mock) 
+        //   });
+         // totaly mock `fs` with your stub 
 */
 export function taskModelTests(t: TestTaskTrackingPlugin) {
     t.test("getTaskTextID", async () => {
@@ -51,37 +61,63 @@ export function taskModelTests(t: TestTaskTrackingPlugin) {
 		task.position.start.col = 0
 		task.status = Status.Complete
         expect(task.toString()).to.eql("- [C] Create illustrative rates tickets #jira #quotebook #illustrativeRates id:2")
-		task.status = Status.Active
+		task.status = Status.Active;
         expect(task.toString()).to.eql("- [A] Create illustrative rates tickets #jira #quotebook #illustrativeRates id:2")
     })
 
-    t.test("fffsetStatus", async () => {
-        // debugger;
-        // const Task = proxyquire('../model/task.model', {
-        //     './service/date.service': {
-        //       default: function now() { return new Date(0)},
-        //     },
-        //   }).default;
-        // debugger;
-        // import * as date from 'service/date.service';
+    t.test("setStatus", async () => {
+        const task = new Task(getSTask());
+		const originalSession = {time: new Date(), status: Status.Inactive};
+		task.sessions = [originalSession];
+        // can't set to same status
+        task.setStatus(Status.Inactive)
+		expect(task.sessions).to.eql([originalSession]);
+		// happy path
+        task.setStatus(Status.Active)
+		const session2 = {time: new Date(), status: Status.Active};
+		expect(task.sessions).to.eql([originalSession, session2]);
+        // can't set to same status
+        task.setStatus(Status.Active)
+		expect(task.sessions).to.eql([originalSession, session2]);
+        // set to complete
+        task.setStatus(Status.Complete)
+		const session3 = {time: new Date(), status: Status.Complete};
+		expect(task.sessions).to.eql([originalSession, session2, session3]);
+        // can't set to same status
+        task.setStatus(Status.Complete)
+		expect(task.sessions).to.eql([originalSession, session2, session3]);
+    })
 
-        // const myTestableFile = rewiremock(() => require('../model/task.model'), () => {
-        //     rewiremock(() => require('service/date.service')).with(mock) 
-        //   });
-         // totaly mock `fs` with your stub 
-        rewiremock('date.service')
-        .with({
-            now: () => console.log("slfjlsdkjf")
-        });
-        console.log(date.now());
-        // const task = new Task(getSTask());
-		// const originalSession = {time: new Date(), status: Status.Inactive};
-		// task.sessions = [originalSession];
+    t.test("toView", async () => {
+        // arrange
+        const stask = getSTask();
+        const task = new Task(stask);
+        const session1Time = new Date(0);
+        const session1 = {time: session1Time, status: Status.Active};
+        const session2Time = new Date(10000);
+        const session2 = {time: session2Time, status: Status.Inactive};
+        const session3Time = new Date(50000);
+        const session3 = {time: session3Time, status: Status.Active};
+        const session4Time = new Date(100000);
+        const session4 = {time: session4Time, status: Status.Complete};
+        task.sessions = [session1, session2, session3, session4];
+        // act
+        const actual = task.toView();
+        // assert
+        expect(actual).to.eql({
+            id: undefined,  // defined outside task constructor
+			status: stask.status,
+			text: "Create illustrative rates tickets",
+			start: session1.time,
+			lastActive: session3.time,
+			timeSpent: (10000 + 50000) / 1000,
+			timeToClose: (100000) / 1000,
+			numSwitches: 2,
+			fileName: stask.path,
+			tags: stask.tags,
+			line: stask.line
+        })
 
-		// // happy path
-        // task.setStatus(Status.Active)
-		// const session2 = {time: new Date(0), status: Status.Active};
-		// expect(task.sessions).to.eql([originalSession, session2]);
     })
 
 }

@@ -10,7 +10,7 @@ let _taskData: TaskDataType;
 
 export const get = async (): Promise<TaskDataType> => {
     if (!_taskData) {
-        const fileContent = await file.readByPath(settings.get().taskDataFileName);
+        const fileContent = await file.read(settings.get().taskDataFileName);
         _taskData = JSON.parse(fileContent);
     }
     return _taskData;

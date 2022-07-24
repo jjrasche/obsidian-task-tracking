@@ -13,7 +13,6 @@ export const add = async (task: Task) => {
 export const find = async (id: number): Promise<Task> => {
     await initialize();
     const task = _tasks.find(task => task.id === id);
-    debugger; 
     if (!task) {
         throw new Error(`could not find task with id:'${id}'`);
     }
@@ -52,7 +51,6 @@ const refreshTasks = async () => {
     const tasks = source.map(sourceTask => {
         const newTask = new Task(sourceTask);
         const matchingDataTask = data.find(dataTask => dataTask.id === newTask.id);
-        debugger;
         if (!!matchingDataTask) {
             newTask.id = matchingDataTask?.id;
             newTask.sessions = [];
