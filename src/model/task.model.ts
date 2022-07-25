@@ -1,4 +1,3 @@
-import {  } from "service/file.service";
 import { Pos } from "obsidian";
 import { STask } from "obsidian-dataview";
 import { Session } from "./session";
@@ -36,7 +35,7 @@ export class Task {
 
 	get viewText(): string {
 		let textWords = this.text.split(/\s/);
-		while(textWords?.last()?.contains("#")) {
+		while(textWords?.last()?.contains("#")) { 
 			textWords.pop();
 		}
 		textWords = textWords?.map(w => w.replace("#", ""));
@@ -70,7 +69,7 @@ export class Task {
 		}
 	}
 	
-	setStatus(status: Status) {
+	setStatus(status: Status) { 
 		if (this.status === status) return;	// do not add the same status as current status
 		this.sessions.push({ time: date.now(), status });
 		this.status = status;

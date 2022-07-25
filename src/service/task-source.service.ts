@@ -1,7 +1,7 @@
-import * as dv from 'service/data-view.service';
-import { STask } from "obsidian-dataview";
+import { DataviewApi, STask } from "obsidian-dataview";
 import { EditorPosition } from 'obsidian';
 import { Task } from 'model/task.model';
+import * as dv from 'service/data-view.service';
 import * as file from "service/file.service";
 
 export const get = (): STask[] => {
@@ -28,4 +28,5 @@ export const save = async (tasks: Task[]) => {
 }
 
 
-const allTasks = (): STask[] => dv.api().pages().file.tasks as STask[];
+let allTasks: () => STask[] = () => dv.api().pages().file.tasks as STask[];
+export const setAllTasksGetter = (method: () => STask[]) => allTasks = method;

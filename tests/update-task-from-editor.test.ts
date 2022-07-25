@@ -12,39 +12,50 @@ import * as tasks from 'state/tasks.state';
     updateTaskFromEditor: source task with id will add session to Tasks
 */
 export function UpdateTaskFromEditorTests(t: TestTaskTrackingPlugin) {
-    t.test("editor is not defined", async () => {
+    // t.test("editor is not defined", async () => {
 
-    })
-    t.test("cursor is not defined", async () => {
+    // })
+    // t.test("cursor is not defined", async () => {
 
-    })
+    // })
     t.test("line is not a task", async () => {
         const fileContent = "not a task, just a line";
         const initialData = {};
         await t.setupEditorTest(fileContent, initialData);
         // act
-        updateTaskFromEditor(t.editor, Status.Active);
+        await updateTaskFromEditor(t.editor, Status.Active);
         // assert
-        expect(tasks.get()).to.eql([]);
+        expect(await tasks.get()).to.eql([]);
     })
-    t.test("fffif current task is same status, do nothing", async() => {
+    t.test("if current task is same status, do nothing", async() => {
         // arrange
         const taskID = 12345;
-        const fileContent = `- [C] I am a task without an ID id:${taskID}`;
+        const fileContent = `- [C] I am a task with an ID id:${taskID}`;
         const initialData = {[taskID]: [{time: new Date(), status: Status.Complete}]};
-        await t.setupEditorTest(fileContent, initialData); 
+        await t.setupEditorTest(fileContent, initialData);
         // act
-        await updateTaskFromEditor(t.editor, Status.Complete);
+        await updateTaskFromEditor(t.editor, Status.Complete); 
         // assert
-        await t.expectNoChanges(fileContent, initialData); 
+        await t.expectNoChanges(fileContent, initialData);
      });
 
-    t.test("source task with no id will create new task in Tasks", async () => {
+    // t.test("source task with no id will create new task in Tasks", async () => {
+    //     // arrange
+    //     const fileContent = `- [C] I am a task with an ID`;
+    //     const initialData = {};
+    //     await t.setupEditorTest(fileContent, initialData);
+    //     // act
+    //     await updateTaskFromEditor(t.editor, Status.Active);
+    //     // assert
+    //     // await t.expectNoChanges(fileContent, initialData); 
+    //     const newData = { 1: [{time: new Date(), status: Status.Active}]};
+    //     const expectedData = t.combineData(initialData, newData);
+    //     await t.expectTaskInData(expectedData);
+    //     await t.expectTargetFile(`- [C] I am a task without an ID id: 1`);
+    // })
+    // t.test("source task with id will add session to Tasks", async () => {
 
-    })
-    t.test("source task with id will add session to Tasks", async () => {
-
-    })
+    // })
     // t.test("if current line is not a task, should not change task or data", async () => {
     //     // arrange
     //     const fileContent = "not a task, just a line";
