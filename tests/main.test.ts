@@ -13,6 +13,8 @@ import * as taskData from 'service/task-data.service';
 import { TaskDataType } from "service/task-data.service";
 import { setAllTasksGetter } from "service/task-source.service";
 import { STask } from "obsidian-dataview";
+import { taskModelTests } from "./task.model.test";
+import { UpdateTaskFromClickTests } from "./update-task-from-click.test";
 
 export const PLUGIN_NAME = "obsidian-task-tracking";
 export const TARGET_FILE_NAME = "TargetFile.md";
@@ -43,7 +45,7 @@ export default class TestTaskTrackingPlugin extends Plugin {
         might need to increase the timeout for larger vaults
     */
     async onload() {
-        setAllTasksGetter(() => dv.api().pages().file.tasks.filter(t => t.path === TARGET_FILE_NAME) as STask[]);   // remove non test sources 
+        setAllTasksGetter(() => dv.api().pages().file.tasks.filter((t: STask) => t.path === TARGET_FILE_NAME) as STask[]);   // remove non test sources 
         app.set(this.app);
         settings.set(Object.assign({}, DEFAULT_SETTINGS));
         if(!(app.get().vault.adapter instanceof FileSystemAdapter)) {
@@ -99,8 +101,9 @@ export default class TestTaskTrackingPlugin extends Plugin {
 
     async load_tests() {
         this.tests = new Array();
-        await this.loadTestSuite(UpdateTaskFromEditorTests)
-        // await this.loadTestSuite(taskModelTests);
+        await this.loadTestSuite(UpdateTaskFromEditorTests);
+        await this.loadTestSuite(UpdateTaskFromClickTests);
+        await this.loadTestSuite(taskModelTests);
         const focusedTests = this.tests.filter(t => t.name.startsWith("fff"));
         if (focusedTests.length > 0) {
             this.tests = focusedTests;

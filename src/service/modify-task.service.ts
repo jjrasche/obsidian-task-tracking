@@ -13,27 +13,24 @@ export const updateTaskFromEditor = async (editor: Editor, status: Status) => {
     const line = editor.getLine(cursor.line);
     if (!line) return; // no active cursor
     if (!isTask(line)) return; // line is not a task
-
     const task = await createNewTaskIfNeeded(cursor, line);
     await changeTaskStatus(task, status);
 }
 
 export const updateTaskFromClick = async (id: number)  => {
-    // when I don't call await on the caller, does this await work 
     const task = await tasks.find(id);
-    console.log(!!task.id ? "caller not awaiting waits insied" : "need to await on the calling function");
     const newStatus = task.status === Status.Active ? Status.Inactive : Status.Active;
-    changeTaskStatus(task, newStatus);
+    await changeTaskStatus(task, newStatus);
 }
 
 export const changeTaskStatus = async (task: Task, status: Status) => {
     if (task.sessions.last()?.status === status) return; // do not add the same status as current status
     if (settings.get().onlyOneTaskActive && status === Status.Active) {
-        inactivateAllActiveTasks();
+        await inactivateAllActiveTasks();
     }
     task.setStatus(status);
     await tasks.persist();
-    await statusBar.modify(task) // test if you need to wait for the persist.
+    statusBar.modify(task);
 }
 
 export const inactivateAllActiveTasks = async () => {
@@ -53,6 +50,7 @@ const createNewTaskIfNeeded = async (cursor: EditorPosition, line: string): Prom
         const sourceTask = taskSource.getByCursor(file?.path, cursor);
         const newTask = new Task(sourceTask);
         newTask.id = await tasks.getNextID();
+        newTask.saved = false;
         await tasks.add(newTask);
         return newTask;
     }

@@ -1,29 +1,23 @@
 import { App, MarkdownView } from "obsidian";
-import { Session } from "model/session";
 import * as React from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import styled from 'styled-components'
-import { TaskDataType } from "../service/task-data.service";
-import { Settings } from "settings";
 import {
-	Column,
 	ColumnDef,
 	ColumnFiltersState,
-	ColumnSort,
 	flexRender,
 	getCoreRowModel,
 	getSortedRowModel,
 	getFilteredRowModel,
 	SortingState,
-	Table,
 	useReactTable,
 	FilterFn,
   } from '@tanstack/react-table'
-import { Status, StatusIndicator, StatusWord } from "model/status";
-import { Task } from "model/task.model";
+import { Status, StatusWord } from "model/status";
 import { ViewData } from "model/view-data.model";
 import { updateTaskFromClick } from "service/modify-task.service";
-import * as tasksState from 'state/tasks.state';
+import * as taskState from 'state/tasks.state';
+import * as appState from 'state/app.state';
 
 
 const Styles = styled.div`
@@ -117,6 +111,7 @@ export const TimeFormatter = (cell: any): JSX.Element => {
 const navigate = (app: App, cell: any) => {
 	const row = cell.row.original as ViewData;
 	if (!!row) {
+		const app = appState.get();
 		app.workspace.openLinkText("", row.fileName ?? "").then(() => {
 			const view = app.workspace.getActiveViewOfType(MarkdownView);
 			const editor = view?.editor;
@@ -136,7 +131,7 @@ const filterFn: FilterFn<any> = (row, columnId, value, addMeta) => {
 		// val = columnDef.cell(cell);
 	}
 	return val.toString().toLowerCase().contains(value.toLowerCase());
-}
+}	
 
 const columns: ColumnDef<ViewData>[] = [
 	// { header: 'ID', accessorKey: 'id' },
@@ -153,35 +148,42 @@ const columns: ColumnDef<ViewData>[] = [
 ];
 
 
-
-
-
-
-export function TaskTrackingReactView({ app, settings }: { app: App, settings: Settings }): JSX.Element {
+export function TaskTrackingReactView(): JSX.Element {
+	const [loading, setLoading] = useState(true);
 	const [tasks, setTasks] = useState<ViewData[]>([]);
-	// const tasks = React.useMemo(async() => (await tasksState.get()).map(t => t.toView()), []);
 	const [sorting, setSorting] = React.useState<SortingState>([{id: "lastActive", desc: true}])
 	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([{ id: "lastActive", value: (new Date()).toLocaleDateString("en-US", {month: 'short', day: '2-digit' }) }]);
-
-	// todo: useeffect to get task data
-
-
-	const rowClickHandler = async (row: ViewData, column: ColumnDef<ViewData, unknown>) => {
-		if (column.id == "status") {
-			updateTaskFromClick(row.id);
-		}
-	}
 	const table = useReactTable({ data: tasks, columns, state: { sorting, columnFilters }, onSortingChange: setSorting, onColumnFiltersChange: setColumnFilters, getCoreRowModel: getCoreRowModel(), getSortedRowModel: getSortedRowModel(), getFilteredRowModel: getFilteredRowModel() });
 
-	React.useEffect(() => {
+	useEffect(() => {
+		refresh()
+		taskState.getChangeListener().subscribe(tasks => refresh());
+		console.log("this should only get run once right?");
+	}, []);
+	useEffect(() => {
 		if (table.getState().columnFilters[0]?.id === 'fullName') {
 		  if (table.getState().sorting[0]?.id !== 'fullName') {
 			table.setSorting([{ id: 'fullName', desc: false }])
 		  }
 		}
 	  }, [table.getState().columnFilters[0]?.id])
+
+	
+	const refresh = () => {
+		setLoading(true);
+		taskState.getViewData().then((ts) => {
+			setLoading(false);
+			setTasks(ts);
+		});
+	}
+
+	const rowClickHandler = async (row: ViewData, column: ColumnDef<ViewData, unknown>) => {
+		if (column.id == "status") {
+			updateTaskFromClick(row.id).then(() => refresh());
+		}
+	}
 	  
-	if (!tasks) {
+	if (loading) {
 		return <h2>loading</h2>
 	} else {
 		return (

@@ -20,6 +20,8 @@ export class Task {
 	tags: string[];
 	// housekeeping
 	dirty = false;
+	error = false;
+	saved = true;
 
 	constructor(stask: STask) {
 		Object.keys(stask).forEach(key => (this as any)[key] = stask[key]);
@@ -73,6 +75,7 @@ export class Task {
 		if (this.status === status) return;	// do not add the same status as current status
 		this.sessions.push({ time: date.now(), status });
 		this.status = status;
+		this.dirty = true;
 	}
 }
 

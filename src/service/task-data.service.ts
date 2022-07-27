@@ -13,9 +13,10 @@ export const get = async (): Promise<TaskDataType> => {
         return _taskData;
     }
     const fileContent = await file.read(settings.get().taskDataFileName);
-    const newData = JSON.parse(fileContent);
+    const newData: TaskDataType = JSON.parse(fileContent);
+    Object.keys(newData).forEach(id => newData[id].forEach(session => session.time = new Date(session.time)))
     _taskData = newData;
-    return newData
+    return newData;
 }
 export const reset = () => _taskData = undefined;
 

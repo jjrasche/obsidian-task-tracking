@@ -17,7 +17,7 @@ export const getByCursor = (path: string = "", cursor: EditorPosition): STask =>
 // save all dirty Task Source
 // optimization: can group changes by file to minimize.
 export const save = async (tasks: Task[]) => {
-    const dirtyTasks = tasks.filter(task => task.dirty);
+    const dirtyTasks = tasks.filter(task => task.dirty && !task.error);
     for(const task of dirtyTasks) {
         let originalContent = await file.read(task.path);
         const lines = originalContent.split("\n")
