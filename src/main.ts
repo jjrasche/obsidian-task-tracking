@@ -12,7 +12,7 @@ export default class TaskTrackingPlugin extends Plugin {
 	statusBar: HTMLElement;
 
 	async onload() {
-		setTimeout(async () => {
+		setTimeout(async () => {  
 			app.set(this.app);
 			settings.set(Object.assign({}, DEFAULT_SETTINGS, await this.loadData()));
 			statusBar.set(this.addStatusBarItem());
@@ -31,7 +31,7 @@ export default class TaskTrackingPlugin extends Plugin {
 			statusBar.set(this.addStatusBarItem());
 			this.registerView(VIEW_ID, (leaf) => new TaskTrackingView(leaf));
 			this.addRibbonIcon("dice", "Activate view", () => this.activateView());
-			this.activateView();
+			// this.activateView();
 
 			statusBar.initialize();
 		}, 1000);

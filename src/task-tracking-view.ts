@@ -44,7 +44,7 @@ export class TaskTrackingView extends ItemView {
 	async onOpen() {
 		console.log(`${this.containerEl.children[1]!}`);
 		this.root = createRoot(this.containerEl.children[1]!);
-		this.root.render(React.createElement(TaskTrackingReactView));
+		this.root.render(React.createElement(TaskTrackingReactView, {view: this}));
 	}
 
 	protected async onClose(): Promise<void> {

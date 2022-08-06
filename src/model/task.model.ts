@@ -8,7 +8,7 @@ import * as date from 'service/date.service';
 export class Task {
 	// task data properties
 	id: number;
-	sessions: Session[] = [];
+	private _sessions: Session[] = [];
 	status?: Status;
 	// task source properties
 	sourceID?: number
@@ -19,6 +19,7 @@ export class Task {
 	text: string;
 	tags: string[];
 	// housekeeping
+	lastActive?: Date;
 	dirty = false;
 	error = false;
 	saved = true;
@@ -46,34 +47,50 @@ export class Task {
 
 	// todo: breakout
 	toView(): ViewData {
-		const timeSpent = this.sessions.reduce((acc, cur, idx) => {
+		const timeSpent = this._sessions.reduce((acc, cur, idx) => {
 			if (cur.status === Status.Active) {
-				const next = this.sessions[idx+1] ?? {time: date.now()};
+				const next = this._sessions[idx+1] ?? {time: date.now()};
 				const currentSessionLength = (next.time.getTime() - cur.time.getTime())/1000;
 				return acc + currentSessionLength;
 			}
 			return acc;
 		}, 0);
-		const first = this.sessions[0];
-		const last = this.sessions[this.sessions.length - 1];
+		const first = this._sessions[0];
+		const last = this._sessions[this._sessions.length - 1];
 		return {
 			id: this.id,
 			status: this.status,
 			text: this.viewText,
-			start: first.time,
-			lastActive: date.from(Math.max(...this.sessions.filter(s => s.status === Status.Active).map(session => session.time.getTime()))),
+			start: first?.time,
+			lastActive: this.lastActive,
 			timeSpent,
 			timeToClose: (!!last && last.status === Status.Complete) ? ((last.time.getTime() - first.time.getTime()) / 1000) : undefined,
-			numSwitches: this.sessions.filter(session => session.status === Status.Active).length,
+			numSwitches: this._sessions.filter(session => session.status === Status.Active).length,
 			fileName: this.path,
 			tags: this.tags,
 			line: this.line
 		}
 	}
+
+	setSessions(sessions: Session[]) {
+		this._sessions = sessions;
+		this.setLastActive();
+	}
+	addSession(session: Session) {
+		this._sessions.push(session);
+		this.setLastActive();
+	}
+	setLastActive() {
+		this.lastActive = date.from(Math.max(...this._sessions.filter(s => s.status === Status.Active).map(session => session.time.getTime())));
+	}
+	get sessions(): Session[] {
+		return this._sessions;
+	}
 	
 	setStatus(status: Status) { 
 		if (this.status === status) return;	// do not add the same status as current status
-		this.sessions.push({ time: date.now(), status });
+		const time = date.now();
+		this.addSession({ time, status });
 		this.status = status;
 		this.dirty = true;
 	}

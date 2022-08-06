@@ -27,7 +27,12 @@ export const getArray = async (): Promise<TaskData[]> => {
 export const save = async (tasks: Task[]) => {
     reset();
     let taskData: TaskDataType = {};
-    tasks.forEach(task => taskData[task.id] = task.sessions);
+    tasks.forEach(task => {
+        if (!task.id) {
+            throw new Error(`was about to save an undefined task ID`);
+        }
+        taskData[task.id] = task.sessions
+    });
     const dataString = JSON.stringify(taskData);
     await file.write(settings.get().taskDataFileName, dataString);
 }

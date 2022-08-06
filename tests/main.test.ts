@@ -15,6 +15,7 @@ import { setAllTasksGetter } from "service/task-source.service";
 import { STask } from "obsidian-dataview";
 import { taskModelTests } from "./task.model.test";
 import { UpdateTaskFromClickTests } from "./update-task-from-click.test";
+import { tasksStateTests } from "./tasks.state.test";
 
 export const PLUGIN_NAME = "obsidian-task-tracking";
 export const TARGET_FILE_NAME = "TargetFile.md";
@@ -51,6 +52,7 @@ export default class TestTaskTrackingPlugin extends Plugin {
         if(!(app.get().vault.adapter instanceof FileSystemAdapter)) {
             throw new Error("adapter must be a file system");
         }
+        await new Promise(r => setTimeout(r, 1000));
         
         const intr = setInterval(function(t) {
             if (t.app.vault.getRoot().children.length > 0 &&    // vault on-change listener is set and can pick up test files adding
@@ -60,7 +62,7 @@ export default class TestTaskTrackingPlugin extends Plugin {
             } else {
                 console.log("not done");
             }
-          }, 50, this)
+          }, 1000, this)
 
     }
 
@@ -104,6 +106,7 @@ export default class TestTaskTrackingPlugin extends Plugin {
         await this.loadTestSuite(UpdateTaskFromEditorTests);
         await this.loadTestSuite(UpdateTaskFromClickTests);
         await this.loadTestSuite(taskModelTests);
+        await this.loadTestSuite(tasksStateTests);
         const focusedTests = this.tests.filter(t => t.name.startsWith("fff"));
         if (focusedTests.length > 0) {
             this.tests = focusedTests;
@@ -182,19 +185,20 @@ export default class TestTaskTrackingPlugin extends Plugin {
     async expectTaskInData(expected: TaskDataType) {
         const actual = await this.getData();
         expect(Object.keys(actual).sort()).to.eql(Object.keys(expected).sort());  // every expected task is present
-        Object.keys(actual).forEach(key => {    // each task
-            const actualSessions = actual[key];
-            const expectedSessions = expected[key];
-            expect(actualSessions.length).to.eql(expectedSessions.length);
-            actualSessions.forEach((actualSession, idx) => {    // each session
-                const expectedSession = expectedSessions[idx];
-                expect(actualSession.status).to.eql(expectedSession.status);
-                this.expectTimeInRange(actualSession.time);
-            });
-        });        
+        Object.keys(actual).forEach(key => this.expectSessionsEqual(actual[key], expected[key]));        
     }
 
-    
+    expectSessionsEqual(expected: Session[], actual?: Session[]) {
+        if (!actual) {
+            throw new Error("expected sessions to be defined");
+        }
+        expect(actual.length).to.eql(expected.length);
+        actual.forEach((actualSession, idx) => {    // each session
+            const expectedSession = expected[idx];
+            expect(actualSession.status).to.eql(expectedSession.status);
+            this.expectTimeInRange(actualSession.time);
+        });
+    }
 
     expectTimeInRange(actual: Date, lowerBound = 1000, upperBound = 100) {
         expect(actual)      // actual time should be before expected time

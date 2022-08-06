@@ -10,6 +10,8 @@ let _tasks = new BehaviorSubject<Task[] | undefined>(undefined);
 export const add = async (task: Task) => {
     const tasks = await initialize();
     tasks.push(task);
+    taskData.reset();   // optimization: could try to alter the in memory state instead of triggering a rewrite
+    refreshTasks();
 }
 
 export const find = async (id: number): Promise<Task> => {
@@ -73,7 +75,7 @@ const refreshTasks = async (): Promise<Task[]> => {
         const matchingDataTask = data.find(dataTask => dataTask.id === newTask.sourceID);
         if (!!matchingDataTask) {
             newTask.id = matchingDataTask?.id;
-            newTask.sessions = matchingDataTask.sessions;
+            newTask.setSessions(matchingDataTask.sessions);
             newTask.status = newTask.sessions.last()?.status;
         }
         return newTask;

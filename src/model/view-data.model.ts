@@ -5,7 +5,7 @@ export class ViewData {
 	status?: Status;
 	text?: string;
 	start: Date;
-	lastActive: Date;
+	lastActive?: Date;
 	timeSpent?: number;	// in seconds
 	timeToClose?: number;	// in seconds
 	numSwitches: number;

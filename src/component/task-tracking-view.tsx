@@ -1,4 +1,4 @@
-import { App, MarkdownView } from "obsidian";
+import { App, MarkdownView, View } from "obsidian";
 import * as React from "react";
 import { useEffect, useState } from "react";
 import styled from 'styled-components'
@@ -12,12 +12,15 @@ import {
 	SortingState,
 	useReactTable,
 	FilterFn,
+	Row,
   } from '@tanstack/react-table'
 import { Status, StatusWord } from "model/status";
 import { ViewData } from "model/view-data.model";
 import { updateTaskFromClick } from "service/modify-task.service";
 import * as taskState from 'state/tasks.state';
 import * as appState from 'state/app.state';
+import { Session } from "model/session";
+import { Task } from "model/task.model";
 
 
 const Styles = styled.div`
@@ -99,14 +102,18 @@ export const TimeFormatter = (cell: any): JSX.Element => {
 	if (typeof(seconds) != "number") {
 		return InvalidCellValue;
 	}
+	return SecondsToTime(seconds) as any;
+}
+
+const SecondsToTime = (seconds: number): string => {
 	seconds = Math.trunc(seconds);
 	const days = Math.floor(seconds / 86400);
 	const hours = Math.floor(seconds / 3600) % 24;
 	const minutes = Math.floor(seconds / 60) % 60;
 	const sec = seconds % 60;
 	
-	return `${!!days ? days.toString() + ':' : ''}${!!hours ? hours.toString() + ':' : ''}${!!minutes ? minutes.toString() + ':' : ''}${sec}` as any;
-}
+	return `${!!days ? days.toString() + ':' : ''}${!!hours ? hours.toString() + ':' : ''}${!!minutes ? minutes.toString() + ':' : ''}${sec}`;
+} 
 
 const navigate = (app: App, cell: any) => {
 	const row = cell.row.original as ViewData;
@@ -123,18 +130,26 @@ const navigate = (app: App, cell: any) => {
 	}
 }
 
-const filterFn: FilterFn<any> = (row, columnId, value, addMeta) => {
+const filterFn: FilterFn<any> = (row: Row<ViewData>, columnId, value, addMeta) => {
 	let val: any = row.getValue(columnId);
 	const columnDef = columns.find((col: any) => col.accessorKey === columnId);
 	const cell = row.getAllCells().find(cell => cell.column.id === columnId)
 	if (!!columnDef && !!columnDef.cell) {
-		// val = columnDef.cell(cell);
+		val = columnDef.cell(cell);
+	}
+	const tags = row.getValue("tags") as string[];
+	const baseTags = tags.map(tag => tag.replace('#', '').split("/")[0])
+	const id = row.getValue("id");
+	if (id == 4) {
+		debugger;
+	}
+	if (baseTags.includes("comm") || baseTags.includes("break")) {
+		return true
 	}
 	return val.toString().toLowerCase().contains(value.toLowerCase());
 }	
 
 const columns: ColumnDef<ViewData>[] = [
-	// { header: 'ID', accessorKey: 'id' },
 	{ header: 'Status', accessorKey: 'status', cell: (cell: any) => StatusWord[cell.getValue() as Status], filterFn  },
 	{ header: 'Text', accessorKey: 'text' },
 	// { header: 'First', accessorKey: 'start', cell: DateFormatter },
@@ -145,11 +160,61 @@ const columns: ColumnDef<ViewData>[] = [
 	{ header: 'Time To Close', accessorKey: 'timeToClose', cell: TimeFormatter, filterFn },
 	{ header: '# Switches', accessorKey: 'numSwitches', filterFn },
 	{ header: 'File', accessorKey: 'fileName', cell: (cell: any) => <a onClick={() => navigate(app, cell)}>{cell.getValue()}</a>, filterFn },
+	{ header: 'ID', accessorKey: 'id' },
 ];
 
+class SessionRange {
+	task: number;
+	tags: string[];
+	start: Date;
+	end: Date;
 
-export function TaskTrackingReactView(): JSX.Element {
+	constructor(task: Task, active: Session, next?: Session) {
+		this.task = task.id;
+		this.tags = task.tags;
+		this.start = active.time,
+		this.end = !!next ? next.time : new Date()
+	}
+
+	// assumption can use new date variable as this will be called quickly after other related functionality
+	trimDates(): this {
+		const now = new Date()
+		if (this.start.toDateString() !== now.toDateString()) {
+			this.start = new Date(now.setTime(0));
+		}
+		return this;
+	}
+
+	get duration(): number {
+		return this.end.getTime() - this.start.getTime();
+	}
+}
+
+const getTodaysSessionRanges = async(): Promise<SessionRange[]> => {
+	const tasks = await taskState.get();
+	const now = (new Date);
+	const todayDate = now.toDateString(); 
+	const sessionRanges: SessionRange[] = []
+	tasks.forEach(task => {
+		if (!!task.sessions) {
+			task.sessions.forEach((active, idx) => {
+				if (active.status === Status.Active) {
+					sessionRanges.push(new SessionRange(task, active, task.sessions[idx + 1]));
+				}
+			});
+		}
+	})
+
+	const todaysessionRanges = sessionRanges.filter(range => range?.end.toDateString() === todayDate || range?.start.toDateString() === todayDate)
+	const trimmedSessionRanges = todaysessionRanges.map(range => range.trimDates());
+	return trimmedSessionRanges;
+}
+
+
+export function TaskTrackingReactView({ view }: { view: View }): JSX.Element {
 	const [loading, setLoading] = useState(true);
+	const [timeTracked, setTimeTracked] = useState("");
+	const [percentTimeTracked, setPercentTimeTracked] = useState("");
 	const [tasks, setTasks] = useState<ViewData[]>([]);
 	const [sorting, setSorting] = React.useState<SortingState>([{id: "lastActive", desc: true}])
 	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([{ id: "lastActive", value: (new Date()).toLocaleDateString("en-US", {month: 'short', day: '2-digit' }) }]);
@@ -158,7 +223,8 @@ export function TaskTrackingReactView(): JSX.Element {
 	useEffect(() => {
 		refresh()
 		taskState.getChangeListener().subscribe(tasks => refresh());
-		console.log("this should only get run once right?");
+		const interval = view.registerInterval(window.setInterval(async() => updateMetrics(), 1000));
+		return () => clearInterval(interval)
 	}, []);
 	useEffect(() => {
 		if (table.getState().columnFilters[0]?.id === 'fullName') {
@@ -177,6 +243,19 @@ export function TaskTrackingReactView(): JSX.Element {
 		});
 	}
 
+	const updateMetrics = async() => {
+		const ranges = await getTodaysSessionRanges();
+		const trackedSeconds = ranges.reduce((acc, cur) =>  acc + cur.duration, 0) / 1000;
+		const time = SecondsToTime(trackedSeconds);
+		setTimeTracked(time);
+		// don't include sleeping so 7- 10:30 = 15.5 hours
+		const timeSinceDayStart = new Date().getTime() - (new Date((new Date()).setHours(7))).getTime();
+		const percentTimeTracked = ((trackedSeconds / (timeSinceDayStart/1000)) * 100).toFixed(2) + '%';
+		
+		setPercentTimeTracked(percentTimeTracked);
+
+	}
+
 	const rowClickHandler = async (row: ViewData, column: ColumnDef<ViewData, unknown>) => {
 		if (column.id == "status") {
 			updateTaskFromClick(row.id).then(() => refresh());
@@ -188,35 +267,27 @@ export function TaskTrackingReactView(): JSX.Element {
 	} else {
 		return (
 			<Styles>
-				{/* <button onClick={refresh}>Refresh</button> */}
+				<div>{timeTracked}</div>
+				<div>{percentTimeTracked}</div>
 				<table>
 					<thead>{table.getHeaderGroups().map(headerGroup => (
 						<tr key={headerGroup.id}>{headerGroup.headers.map(header => (
-							// <th key={header.id}> {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</th>
-							<th key={header.id} colSpan={header.colSpan}> { header.isPlaceholder ? null : (
+							<th key={header.id} colSpan={header.colSpan}> 
+							{ header.isPlaceholder ? null : (
 								<>
 									<div {...{ className: header.column.getCanSort() ? 'cursor-pointer select-none' : '', onClick: header.column.getToggleSortingHandler() }}>
 										{ flexRender(header.column.columnDef.header, header.getContext()) }
 										{{ asc: ' 🔼', desc: ' 🔽' }[header.column.getIsSorted() as string] ?? null}
 									</div>
-									{header.column.getCanFilter() ? (
+									{/* {header.column.getCanFilter() ? (
 										<div>
-											<input onChange={e => {
-												// console.log(header.column);
-												const val = e.target.value;
-												header.column.setFilterValue(val);
-												// console.log(header.column.getFilterValue());
-												// debugger;
-												// table.getAllColumns().forEach(col => {
-												// 	if (!!col.getFilterValue()) {
-												// 		console.log(`${col.getFilterValue()}`);
-												// 	}
-												// })
-											}}/>
+											<input onChange={ e => header.column.setFilterValue(e.target.value) }/>
 										</div>
-									) : null}
+									) : null} */}
 							  </>
 							)}
+
+
 						  </th>
 						))}
 						</tr>
@@ -234,67 +305,3 @@ export function TaskTrackingReactView(): JSX.Element {
 		)
 	}
 }
-
-
-
-
-// export function Filter({ column, table }: { column: Column<any, unknown>, table: Table<any> }) {
-// 	const firstValue = table
-// 	  .getPreFilteredRowModel()
-// 	  .flatRows[0]?.getValue(column.id)
-  
-// 	const columnFilterValue = column.getFilterValue()
-  
-// 	const sortedUniqueValues = React.useMemo(() =>
-// 		typeof firstValue === 'number' ? [] : Array.from(column.getFacetedUniqueValues().keys()).sort(),
-// 		[column.getFacetedUniqueValues()]
-// 	);
-  
-// 	return typeof firstValue === 'number' ? (
-// 	  <div>
-// 		<div className="flex space-x-2">
-// 		  <DebouncedInput
-// 			type="number"
-// 			min={Number(column.getFacetedMinMaxValues()?.[0] ?? '')}
-// 			max={Number(column.getFacetedMinMaxValues()?.[1] ?? '')}
-// 			value={(columnFilterValue as [number, number])?.[0] ?? ''}
-// 			onChange={value =>
-// 			  column.setFilterValue((old: [number, number]) => [value, old?.[1]])
-// 			}
-// 			placeholder={`Min ${
-// 			  column.getFacetedMinMaxValues()?.[0]
-// 				? `(${column.getFacetedMinMaxValues()?.[0]})`
-// 				: ''
-// 			}`}
-// 			className="w-24 border shadow rounded"
-// 		  />
-// 		  <DebouncedInput
-// 			type="number"
-// 			min={Number(column.getFacetedMinMaxValues()?.[0] ?? '')}
-// 			max={Number(column.getFacetedMinMaxValues()?.[1] ?? '')}
-// 			value={(columnFilterValue as [number, number])?.[1] ?? ''}
-// 			onChange={value =>
-// 			  column.setFilterValue((old: [number, number]) => [old?.[0], value])
-// 			}
-// 			placeholder={`Max ${
-// 			  column.getFacetedMinMaxValues()?.[1]
-// 				? `(${column.getFacetedMinMaxValues()?.[1]})`
-// 				: ''
-// 			}`}
-// 			className="w-24 border shadow rounded"
-// 		  />
-// 		</div>
-// 		<div className="h-1" />
-// 	  </div>
-// 	) : (
-// 	  <>
-// 		<datalist id={column.id + 'list'}>
-// 		  {sortedUniqueValues.slice(0, 5000).map((value: any) => (
-// 			<option value={value} key={value} />
-// 		  ))}
-// 		</datalist>
-// 		<input value={(columnFilterValue ?? '') as string} onChange={value => column.setFilterValue(value)}/>
-// 		<div className="h-1" />
-// 	  </>
-// 	)
-//   }
