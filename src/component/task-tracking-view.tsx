@@ -137,14 +137,14 @@ const filterFn: FilterFn<any> = (row: Row<ViewData>, columnId, value, addMeta) =
 	if (!!columnDef && !!columnDef.cell) {
 		val = columnDef.cell(cell);
 	}
-	const tags = row.getValue("tags") as string[];
-	const baseTags = tags.map(tag => tag.replace('#', '').split("/")[0])
-	const id = row.getValue("id");
-	if (id == 4) {
-		debugger;
-	}
-	if (baseTags.includes("comm") || baseTags.includes("break")) {
-		return true
+	// always include comm and break tags 
+	try {
+		const tags = (row.getValue("tags") as string[]).map(tag => tag.replace('#', '').split("/")[0])
+		if (tags.includes("comm") || tags.includes("break")) {
+			return true
+		}
+	} catch(e) {
+		console.log(e);
 	}
 	return val.toString().toLowerCase().contains(value.toLowerCase());
 }	

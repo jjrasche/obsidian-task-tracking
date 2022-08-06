@@ -8,6 +8,7 @@ import * as taskSource from 'service/task-source.service';
 import * as statusBar from 'service/status-bar.service';
 
 export const updateTaskFromEditor = async (editor: Editor, status: Status) => {
+    console.log("starting updateTaskFromEditor");
     const cursor = editor.getCursor();
     if (!cursor) return; // didn't find an acitve cursor 
     const line = editor.getLine(cursor.line);
@@ -18,6 +19,7 @@ export const updateTaskFromEditor = async (editor: Editor, status: Status) => {
 }
 
 export const updateTaskFromClick = async (id: number)  => {
+    console.log("starting updateTaskFromClick");
     const task = await tasks.find(id);
     const newStatus = task.status === Status.Active ? Status.Inactive : Status.Active;
     await changeTaskStatus(task, newStatus);
@@ -47,6 +49,7 @@ const createNewTaskIfNeeded = async (cursor: EditorPosition, line: string): Prom
     const file = app.get().workspace.getActiveFile();
     const sourceTaskID = getTaskTextID(line);
     if (!sourceTaskID) {
+        console.log(`creating new task ${line}`);
         const sourceTask = taskSource.getByCursor(file?.path, cursor);
         const newTask = new Task(sourceTask);
         newTask.id = await tasks.getNextID();

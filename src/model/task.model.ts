@@ -89,6 +89,7 @@ export class Task {
 	
 	setStatus(status: Status) { 
 		if (this.status === status) return;	// do not add the same status as current status
+		console.log(`setting task ${this.id} form ${!!this.status ? StatusIndicator[this.status]: null} to ${StatusIndicator[status]}`)
 		const time = date.now();
 		this.addSession({ time, status });
 		this.status = status;

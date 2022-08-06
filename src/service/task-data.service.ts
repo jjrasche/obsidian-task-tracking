@@ -35,4 +35,6 @@ export const save = async (tasks: Task[]) => {
     });
     const dataString = JSON.stringify(taskData);
     await file.write(settings.get().taskDataFileName, dataString);
+    console.log(`saved task data ${tasks.length}`);
+
 }

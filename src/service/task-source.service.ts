@@ -24,6 +24,7 @@ export const save = async (tasks: Task[]) => {
         lines[task.line] = task.toString();
         const updatedContent = lines.join("\n");
         file.write(task.path, updatedContent);
+        console.log(`saved task ${task.id} in file ${task.path}`);
     };
 }
 

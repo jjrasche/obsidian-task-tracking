@@ -11,7 +11,8 @@ export const add = async (task: Task) => {
     const tasks = await initialize();
     tasks.push(task);
     taskData.reset();   // optimization: could try to alter the in memory state instead of triggering a rewrite
-    refreshTasks();
+    await refreshTasks();
+    console.log(`done adding task ${task.id} numTasks: ${_tasks.value?.length} contains: ${_tasks.value?.find(t => t.id === task.id)}`);
 }
 
 export const find = async (id: number): Promise<Task> => {
@@ -53,6 +54,7 @@ export const persist = async () => {
     await taskSource.save(tasks);
     await taskData.save(tasks);
     await refreshTasks();  // do a refresh here so we are not waiting when this data is needed 
+    console.log(`done persisting numTasks:${_tasks.value?.length}`);
 }
 
 export const getNextID = async (): Promise<number> => {

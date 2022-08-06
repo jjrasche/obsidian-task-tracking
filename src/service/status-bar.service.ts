@@ -16,6 +16,7 @@ export const initialize = async () => {
 export const modify = (task: Task) => {
     _statusBar?.firstChild?.remove();   // wipe previous html
     const ele = _statusBar?.createEl("span", { text: task.toString()});
+    console.log("updated status bar");
     ele.onclick = () => {
         updateTaskFromClick(task.id);
         modify(task);
