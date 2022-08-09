@@ -1,4 +1,4 @@
-import { App, MarkdownView, View } from "obsidian";
+import { App, MarkdownView, Setting, View } from "obsidian";
 import * as React from "react";
 import { useEffect, useState } from "react";
 import styled from 'styled-components'
@@ -19,6 +19,7 @@ import { ViewData } from "model/view-data.model";
 import { updateTaskFromClick } from "service/modify-task.service";
 import * as taskState from 'state/tasks.state';
 import * as appState from 'state/app.state';
+import * as settings from 'state/settings.state';
 import { Session } from "model/session";
 import { Task } from "model/task.model";
 
@@ -122,7 +123,6 @@ const navigate = (app: App, cell: any) => {
 		app.workspace.openLinkText("", row.fileName ?? "").then(() => {
 			const view = app.workspace.getActiveViewOfType(MarkdownView);
 			const editor = view?.editor;
-			console.log(editor);
 			if (!!editor) {
 				editor.scrollIntoView({ from: {line: row.line ?? 0, ch: 0}, to: {line: row.line ?? 0, ch: 0}}, true);
 			}
@@ -135,13 +135,13 @@ const filterFn: FilterFn<any> = (row: Row<ViewData>, columnId, value, addMeta) =
 	const columnDef = columns.find((col: any) => col.accessorKey === columnId);
 	const cell = row.getAllCells().find(cell => cell.column.id === columnId)
 	if (!!columnDef && !!columnDef.cell) {
-		val = columnDef.cell(cell);
+		val = (columnDef as any).cell(cell);
 	}
-	// always include comm and break tags 
+	// always include certain tags
 	try {
 		const tags = (row.getValue("tags") as string[]).map(tag => tag.replace('#', '').split("/")[0])
-		if (tags.includes("comm") || tags.includes("break")) {
-			return true
+		if (tags.some(tag => settings.get().alwaysIncludeTagsInView.includes(tag))) {
+			return true;
 		}
 	} catch(e) {
 		console.log(e);
@@ -257,7 +257,7 @@ export function TaskTrackingReactView({ view }: { view: View }): JSX.Element {
 	}
 
 	const rowClickHandler = async (row: ViewData, column: ColumnDef<ViewData, unknown>) => {
-		if (column.id == "status") {
+		if (column.id !== "fileName") {
 			updateTaskFromClick(row.id).then(() => refresh());
 		}
 	}

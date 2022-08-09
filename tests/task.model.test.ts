@@ -68,7 +68,7 @@ export function taskModelTests(t: TestTaskTrackingPlugin) {
     t.test("setStatus", async () => {
         const task = new Task(getSTask());
 		const originalSession = {time: new Date(), status: Status.Inactive};
-		task.sessions = [originalSession];
+		task.setSessions([originalSession]);
         // can't set to same status
         task.setStatus(Status.Inactive)
 		expect(task.sessions).to.eql([originalSession]);
@@ -100,7 +100,7 @@ export function taskModelTests(t: TestTaskTrackingPlugin) {
         const session3 = {time: session3Time, status: Status.Active};
         const session4Time = new Date(100000);
         const session4 = {time: session4Time, status: Status.Complete};
-        task.sessions = [session1, session2, session3, session4];
+        task.setSessions([session1, session2, session3, session4]);
         // act
         const actual = task.toView();
         // assert
