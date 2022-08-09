@@ -9,3 +9,5 @@ export const api = (): DataviewApi => {
     }
     return _api;
 }
+
+export const ready = (): boolean => !!api() && !!api().pages() && api().pages().length > 0;

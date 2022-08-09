@@ -10,8 +10,6 @@ let _tasks = new BehaviorSubject<Task[] | undefined>(undefined);
 export const add = async (task: Task) => {
     const tasks = await initialize();
     tasks.push(task);
-    taskData.reset();   // optimization: could try to alter the in memory state instead of triggering a rewrite
-    await refreshTasks();
     console.log(`done adding task ${task.id} numTasks: ${_tasks.value?.length} contains: ${_tasks.value?.find(t => t.id === task.id)}`);
 }
 
