@@ -1,3 +1,4 @@
+import { copy } from 'esbuild-plugin-copy';
 import esbuild from "esbuild";
 import process from "process";
 import builtins from 'builtin-modules'
@@ -22,7 +23,9 @@ if (!test_build) {
     outfile = 'C:/Users/rasche_j/Documents/everything/.obsidian/plugins/obsidian-activity-tracking/main.js'; // haven't found a way for obsidian to load main.test.js too
 }
 
-esbuild.build({
+
+(async () => {
+	const res = esbuild.build({
 	banner: {
 		js: banner,
 	},
@@ -63,4 +66,13 @@ esbuild.build({
 	sourcemap: prod ? false : 'inline',
 	treeShaking: true,
 	outfile: outfile,
-}).catch(() => process.exit(1));
+	plugins: [
+		copy({
+		  assets: {
+			from: ['manifest.json'],
+			to: ['manifest.json'],
+		  },
+		}),
+	  ],
+	});
+})();
