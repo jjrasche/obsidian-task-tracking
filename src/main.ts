@@ -4,13 +4,10 @@ import { DEFAULT_SETTINGS } from 'settings';
 import { TaskTrackingView, VIEW_ID } from 'task-tracking-view';
 import { updateTaskFromEditor } from 'service/modify-task.service';
 import * as app from 'state/app.state';
-import * as tasks from 'state/tasks.state';
 import * as settings from 'state/settings.state';
 import * as statusBar from 'service/status-bar.service';
-import * as taskSource from 'service/task-source.service';
-import * as taskData from 'service/task-data.service';
 import * as dv from 'service/data-view.service';
-import * as poll from 'service/poll.service';
+import * as wait from 'service/wait.service';
 
 
 export default class TaskTrackingPlugin extends Plugin {
@@ -22,14 +19,10 @@ export default class TaskTrackingPlugin extends Plugin {
 		app.set(this.app);
 		settings.set(Object.assign({}, DEFAULT_SETTINGS, await this.loadData()));
 		statusBar.set(this.addStatusBarItem());
-		poll.run(() => dv.ready(), this.setup, 200);
+		wait.until(() => dv.ready(), this.setup, 200);
 	}
 	
 	setup = async() => {
-		console.log(`found ${taskSource.get().length} source tasks`);
-		console.log(`found ${(await taskData.getArray()).length} data tasks`);
-		console.log(`found ${(await tasks.get()).length} task objects`);
-
 		const editorCallback = (status: Status) => (check: boolean, editor: Editor) => {
 			if (!!check) {
 				return !!editor;

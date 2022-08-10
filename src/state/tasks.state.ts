@@ -11,7 +11,7 @@ export const add = async (task: Task) => {
     const existingTasks = await initialize();
     const tasks = [...existingTasks, task];
     set(tasks);
-    console.log(`done adding task ${task.id} numTasks: ${tasks.length} contains: ${tasks.find(t => t.id === task.id)}`);
+    // console.log(`tasks added id:${task.id}\tnumTasks:${tasks.length}\tcontains:${tasks.find(t => t.id === task.id)}`);
 }
 
 export const find = async (id: number): Promise<Task> => {
@@ -49,23 +49,16 @@ export const getViewData = async (filter ?: TaskFilter): Promise<ViewData[]> => 
 }
 
 export const persist = async () => {
-    // need ot refresh 
     const tasks = await refreshTaskSource(); 
-    // todo: consider not awaiting 
     await taskSource.save(tasks);
-    console.log("2");
     await taskData.save(tasks);
     await refreshTasks();  // do a refresh here so we are not waiting when this data is needed 
-    console.log(`done persisting numTasks:${tasks.length}`);
 }
 
 export const getNextID = async (): Promise<number> => {
     const tasks = await get();
-    // todo: check if there are diff ids for data and source from combined task objects
     const taskIDs = tasks.map(task => task.id).sort((a,b) => b - a)
-    const nextID = taskIDs.length === 0 ? 1 : taskIDs[0] + 1;
-    console.log(`getNextID: nextID=${nextID}   numTasks=${tasks.length}`);
-    return nextID
+    return taskIDs.length === 0 ? 1 : taskIDs[0] + 1;
 }
 
 /*
@@ -86,12 +79,13 @@ const refreshTasks = async (): Promise<Task[]> => {
             newTask.status = newTask.sessions.last()?.status;
         } else {
             // sources without data
-            console.log(`source task has no data ${newTask.text} id:${newTask.sourceID}`);
+            console.error(`source task has no data ${newTask.text} id:${newTask.sourceID}`);
         }
         return newTask;
     });    
     // data without sources
     
+    // todo: check for this
 
     set([...tasks]);
     return [...tasks]
@@ -109,6 +103,7 @@ const refreshTaskSource = async () => {
         } else {
             task.error = true;
             console.error(`source for task:${task.id} cannot be found in file ${task.path}`);
+            // todo: consider removing this task state
         }
     });
     set([...tasks]);
@@ -116,13 +111,10 @@ const refreshTaskSource = async () => {
 }
 
 const initialize = async (): Promise<Task[]> => {
-    const tasks = _tasks.value;
-    let undef = !tasks;
     if (!_tasks.value) {
-        const tasks = await refreshTasks();
+        return await refreshTasks();
     }
-    console.log(`initialize: ${undef}    ${tasks?.length}`)
-    return !tasks ? [] : tasks;
+    return _tasks.value;
 }
 
 type TaskFilter = (task: Task) => boolean;

@@ -26,7 +26,6 @@ export class Task {
 
 	constructor(stask: STask) {
 		Object.keys(stask).forEach(key => (this as any)[key] = stask[key]);
-		// todo: set status
 		this.sourceID = getTaskTextID(this.text);
 		this.text = getTaskText(this.text);
 	}
@@ -49,7 +48,6 @@ export class Task {
 		return textWords?.join(" ");
 	}
 
-	// todo: breakout
 	toView(): ViewData {
 		const timeSpent = this._sessions.reduce((acc, cur, idx) => {
 			if (cur.status === Status.Active) {
@@ -97,7 +95,6 @@ export class Task {
 	
 	setStatus(status: Status) { 
 		if (this.status === status) return;	// do not add the same status as current status
-		console.log(`setting task ${this.id} form ${!!this.status ? StatusIndicator[this.status]: null} to ${StatusIndicator[status]}`)
 		const time = date.now();
 		this.addSession({ time, status });
 		this.status = status;

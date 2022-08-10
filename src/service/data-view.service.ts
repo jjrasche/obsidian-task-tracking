@@ -15,15 +15,6 @@ export const ready = (): boolean => !!api() && !!api().pages() && api().pages().
 export const allTasks: () => STask[] = () => api().pages().file.tasks as STask[];
 export const allManagedTasks: () => STask[] = () => allTasks().filter(t => t.text.contains("id:"));
 
-
-
-// export const taskInDv = (id: number | undefined): boolean => ready() && !!allTasks().find(t => getTaskTextID(t.text) === id);
-
 export const taskInDv = (id: number | undefined): boolean => {
-    const r = ready()
-    const tasks = allManagedTasks();
-    const task = tasks.find(t => getTaskTextID(t.text) === id);
-    const ret = r && !!task
-    console.log(`taskInDv - id:${id}  task:${task?.text}  numTasks:${tasks.length}    ret:${ret}`);
-    return ret;
+    return ready() && !!allManagedTasks().find(t => getTaskTextID(t.text) === id);
 }

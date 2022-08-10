@@ -25,20 +25,6 @@ export const remove = async(path: string): Promise<boolean> => {
 	}
 }
 
-// export const create = async(fileName: string): Promise<TFile> => {
-	
-// 	// await new Promise(r => setTimeout(r, 200));
-// 	// try { return await app.get().vault.create(fileName, "") } catch(e) { }
-// 	// await new Promise(r => setTimeout(r, 200));
-// 	// try { return await app.get().vault.create(fileName, "") } catch(e) { }
-// 	// await new Promise(r => setTimeout(r, 200));
-// 	try {
-// 		app.adapter().write("");
-// 	} catch(e) {
-// 		return await find(fileName)      
-// 	}
-// }
-
 export const read = async(path: string): Promise<string> => {
 	return await app.adapter().read(path);
 }
@@ -46,29 +32,3 @@ export const read = async(path: string): Promise<string> => {
 export const write = async(path: string, content: string = ""): Promise<void> => {
 	await app.adapter().write(path, content); 
 }
-
-// // import { readFileSync, writeFileSync } from "node:fs";
-// import fs from 'fs'
-// import * as app from 'state/app.state';
-
-// // todo: consider going async
-// export const read = (fileName: string): string => {
-// 	// const path = fs.realpathSync();
-// 	console.log(__dirname); 
-// 	console.log(__filename); 
-// 	console.log(app.get().vault.getRoot())
-// 	return fs.readFileSync(`./${fileName}`, 'utf-8');
-// }
-
-// export const save = (fileName: string, fileContent: string) => {
-// 	fs.writeFileSync(fileName, fileContent);
-// }
-
-// export const remove = (fileName: string) => {
-// 	fs.rmSync(fileName);
-// }
-
-
-// // export const await find = (fileName: string, fileContent: string) => {
-// // 	fs.find(fileName, fileContent);
-// // }

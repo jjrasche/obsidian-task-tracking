@@ -6,7 +6,6 @@ import { Task } from "model/task.model";
 export type TaskDataType = {[key: string]: Session[]};
 export type TaskData = {id: number, sessions: Session[]};
 let _taskData: TaskDataType | undefined;
-// todo: pull from settings
 
 export const get = async (): Promise<TaskDataType> => {
     if (!!_taskData) {

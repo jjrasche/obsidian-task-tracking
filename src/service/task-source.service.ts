@@ -1,14 +1,12 @@
-import { DataviewApi, STask } from "obsidian-dataview";
+import { STask } from "obsidian-dataview";
 import { EditorPosition } from 'obsidian';
 import { Task } from 'model/task.model';
 import * as dv from 'service/data-view.service';
 import * as file from "service/file.service";
-import * as poll from 'service/poll.service';
+import * as wait from 'service/wait.service';
 
-// todo: there is a race condition here where dataview does not yet have access to a newly created task
-export const get = (): STask[] => {
-    return dv.allManagedTasks();
-}
+export const get = (): STask[] => dv.allManagedTasks();
+
 export const getByCursor = (path: string = "", cursor: EditorPosition): STask => {
     const taskAtCursor = dv.allTasks().find(t => t.path == path && t.line == cursor.line);
     if (!taskAtCursor) {
@@ -16,30 +14,30 @@ export const getByCursor = (path: string = "", cursor: EditorPosition): STask =>
     }
     return taskAtCursor;
 }
-// save all dirty Task Source
+
 // optimization: can group changes by file to minimize.
 export const save = async (tasks: Task[]) => {
     const dirtyTasks = tasks.filter(task => task.dirty && !task.error);
-    let waitingOnNewTasks = [];
+    let sourceUpdateWaits: Promise<void>[] = [];
     for(const task of dirtyTasks) {
+        // update the text of the task when status is changed or an id is set
         let originalContent = await file.read(task.path);
         const lines = originalContent.split("\n")
-        lines[task.line] = task.toString();
+        const originalLine = lines[task.line];
+        const newLine = task.toString();
+        lines[task.line] = newLine
         const updatedContent = lines.join("\n");
         await file.write(task.path, updatedContent);
-        console.log(`saved task ${task.id} in file ${task.path}`);
-        // wait till data view has pulled this task
-        if (task.saved === false) {
-            waitingOnNewTasks.push(task.id);
-            task.saved = true;
-        }
-        // await poll.run(() => dv.taskInDv(task.id), () => {}, 10, 2000);
+        // mark task and wait for dataview to update its task list to prevent race conditions of altering source prior to task objects updating
         task.dirty = false;
+        task.saved = true;
+        sourceUpdateWaits.push(wait.until(() => dv.taskInDv(task.id), () => {}, 200));
+        console.log(`updated task source: id:${task.id}\n\tfrom:'${originalLine}'\n\tupdated:${newLine}`);
     };
-    await Promise.all(waitingOnNewTasks.map(id => poll.run(() => dv.taskInDv(id), () => {}, 500, 2000))).catch((e) => console.log(e));
-    console.log("1");
+    await Promise.all(sourceUpdateWaits);
 }
 
+// use to wipe out all managed tasks in source files
 export const nukeAllIdsOnSourceTasks = async () => {
     const tasks = get().map(st => {
         let task = new Task(st)
