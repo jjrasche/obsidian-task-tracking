@@ -31,9 +31,13 @@ export class Task {
 		this.text = getTaskText(this.text);
 	}
 	
-	public toString(): string {
+	public toString(addID: boolean = true): string {
 		const tabs = [...Array(this.position.start.col)].reduce((acc) => acc += "\t", "");
-		return `${tabs}${this.symbol} [${this.status === undefined ? ' ' : StatusIndicator[this.status]}] ${this.text?.trim()} id:${this.id}`;
+		let ret = `${tabs}${this.symbol} [${this.status === undefined ? ' ' : StatusIndicator[this.status]}] ${this.text?.trim()}`;
+		if (addID) {
+			ret += ` id:${this.id}`;
+		}
+		return ret;
 	}
 
 	get viewText(): string {
@@ -81,7 +85,11 @@ export class Task {
 		this.setLastActive();
 	}
 	setLastActive() {
-		this.lastActive = date.from(Math.max(...this._sessions.filter(s => s.status === Status.Active).map(session => session.time.getTime())));
+		const activeSessionTimes = this._sessions.filter(s => s.status === Status.Active).map(session => session.time.getTime());
+		if (activeSessionTimes.length === 0) {
+			return;
+		}
+		this.lastActive = date.from(Math.max(...activeSessionTimes));
 	}
 	get sessions(): Session[] {
 		return this._sessions;

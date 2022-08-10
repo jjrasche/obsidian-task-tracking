@@ -1,4 +1,4 @@
-import { App, MarkdownView, Setting, View } from "obsidian";
+import { App, MarkdownView, Platform, Setting, View } from "obsidian";
 import * as React from "react";
 import { useEffect, useState } from "react";
 import styled from 'styled-components'
@@ -14,7 +14,7 @@ import {
 	FilterFn,
 	Row,
   } from '@tanstack/react-table'
-import { Status, StatusWord } from "model/status";
+import { Status, StatusIndicator, StatusWord } from "model/status";
 import { ViewData } from "model/view-data.model";
 import { updateTaskFromClick } from "service/modify-task.service";
 import * as taskState from 'state/tasks.state';
@@ -64,10 +64,22 @@ export const DateFormatter = (cell: any): JSX.Element => {
 	return date.toLocaleDateString("en-US", {month: 'short', day: '2-digit', hour: 'numeric', minute: 'numeric', hour12: false});
 }
 
-export const StringFormatter = (cell: any): JSX.Element => {
-	const value = cell.getValue();
+export const DateSimpleTimeFormatter = (cell: any): JSX.Element => {
+	const date = cell.getValue();
+	if (!date) {
+		return BlankCellValue;
+	}
+	return date.toLocaleDateString("en-US", {hour: 'numeric', minute: 'numeric', hour12: false});
+}
+
+
+export const StringFormatter = (maxLength?: number): (cell: any)=> JSX.Element => (cell: any) => {
+	let value = cell.getValue();
 	if (!value) {
 		return BlankCellValue;
+	}
+	if (!!maxLength) {
+		value = (value as string).substring(0, maxLength);
 	}
 	return <span>{value}</span>;
 }
@@ -132,15 +144,18 @@ const navigate = (app: App, cell: any) => {
 
 const filterFn: FilterFn<any> = (row: Row<ViewData>, columnId, value, addMeta) => {
 	let val: any = row.getValue(columnId);
-	const columnDef = columns.find((col: any) => col.accessorKey === columnId);
+	const columnDef = getColumns().find((col: any) => col.accessorKey === columnId);
 	const cell = row.getAllCells().find(cell => cell.column.id === columnId)
 	if (!!columnDef && !!columnDef.cell) {
 		val = (columnDef as any).cell(cell);
 	}
 	// always include certain tags
 	try {
-		const tags = (row.getValue("tags") as string[]).map(tag => tag.replace('#', '').split("/")[0])
-		if (tags.some(tag => settings.get().alwaysIncludeTagsInView.includes(tag))) {
+		const tags = row.getValue("tags") as string[];
+		let calculatedTags = tags.map(tag => tag.replace('#', '').split("/")[0]); // base tags
+		calculatedTags = calculatedTags.concat(tags.map(tag => tag.replace('#', ''))); // full tags
+		const includeTags = settings.get().alwaysIncludeTagsInView;
+		if (calculatedTags.some(tag => includeTags.includes(tag))) {
 			return true;
 		}
 	} catch(e) {
@@ -149,11 +164,9 @@ const filterFn: FilterFn<any> = (row: Row<ViewData>, columnId, value, addMeta) =
 	return val.toString().toLowerCase().contains(value.toLowerCase());
 }	
 
-const columns: ColumnDef<ViewData>[] = [
+const desktopColumns: ColumnDef<ViewData>[] = [
 	{ header: 'Status', accessorKey: 'status', cell: (cell: any) => StatusWord[cell.getValue() as Status], filterFn  },
 	{ header: 'Text', accessorKey: 'text' },
-	// { header: 'First', accessorKey: 'start', cell: DateFormatter },
-	// { header: 'Last', accessorKey: 'end' , cell: DateFormatter },
 	{ header: 'Recent', accessorKey: 'lastActive' , cell: DateFormatter, filterFn },
 	{ header: 'Tags', accessorKey: 'tags', cell: ArrayFormatter, filterFn },
 	{ header: 'Time Spent', accessorKey: 'timeSpent', cell: TimeFormatter, filterFn },
@@ -162,6 +175,18 @@ const columns: ColumnDef<ViewData>[] = [
 	{ header: 'File', accessorKey: 'fileName', cell: (cell: any) => <a onClick={() => navigate(app, cell)}>{cell.getValue()}</a>, filterFn },
 	{ header: 'ID', accessorKey: 'id' },
 ];
+ 
+const mobileColumns: ColumnDef<ViewData>[] = [
+	{ header: '', accessorKey: 'status', cell: (cell: any) => StatusIndicator[cell.getValue() as Status], filterFn  },
+	{ header: 'text', accessorKey: 'text', cell: StringFormatter(20) },
+	{ header: 'recent', accessorKey: 'lastActive' , cell: DateSimpleTimeFormatter, filterFn },
+	{ header: 'Tags', accessorKey: 'tags', cell: ArrayFormatter, filterFn },
+	{ header: 'spent', accessorKey: 'timeSpent', cell: TimeFormatter, filterFn },
+	// { header: 'File', accessorKey: 'fileName', cell: (cell: any) => <a onClick={() => navigate(app, cell)}>{cell.getValue()}</a>, filterFn },
+];
+
+// const getColumns = (): ColumnDef<ViewData>[] => Platform.isMobile ? mobileColumns : desktopColumns;
+const getColumns = (): ColumnDef<ViewData>[] => mobileColumns;
 
 class SessionRange {
 	task: number;
@@ -213,14 +238,16 @@ const getTodaysSessionRanges = async(): Promise<SessionRange[]> => {
 
 export function TaskTrackingReactView({ view }: { view: View }): JSX.Element {
 	const [loading, setLoading] = useState(true);
+	const [columns] = useState(getColumns());
 	const [timeTracked, setTimeTracked] = useState("");
 	const [percentTimeTracked, setPercentTimeTracked] = useState("");
 	const [tasks, setTasks] = useState<ViewData[]>([]);
-	const [sorting, setSorting] = React.useState<SortingState>([{id: "lastActive", desc: true}])
+	const [sorting, setSorting] = React.useState<SortingState>([{id: "lastActive", desc: true}]);
 	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([{ id: "lastActive", value: (new Date()).toLocaleDateString("en-US", {month: 'short', day: '2-digit' }) }]);
+	
 	const table = useReactTable({ data: tasks, columns, state: { sorting, columnFilters }, onSortingChange: setSorting, onColumnFiltersChange: setColumnFilters, getCoreRowModel: getCoreRowModel(), getSortedRowModel: getSortedRowModel(), getFilteredRowModel: getFilteredRowModel() });
 
-	useEffect(() => {
+	useEffect(() => { 
 		refresh()
 		taskState.getChangeListener().subscribe(tasks => refresh());
 		const interval = view.registerInterval(window.setInterval(async() => updateMetrics(), 1000));
@@ -258,7 +285,7 @@ export function TaskTrackingReactView({ view }: { view: View }): JSX.Element {
 
 	const rowClickHandler = async (row: ViewData, column: ColumnDef<ViewData, unknown>) => {
 		if (column.id !== "fileName") {
-			updateTaskFromClick(row.id).then(() => refresh());
+			await updateTaskFromClick(row.id).then(() => refresh());
 		}
 	}
 	  

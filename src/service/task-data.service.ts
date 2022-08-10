@@ -12,7 +12,12 @@ export const get = async (): Promise<TaskDataType> => {
     if (!!_taskData) {
         return _taskData;
     }
-    const fileContent = await file.read(settings.get().taskDataFileName);
+    let fileContent = "{}";
+    try {
+        fileContent = await file.read(settings.get().taskDataFileName);
+    } catch(e) {
+        await file.write(settings.get().taskDataFileName, fileContent);
+    }
     const newData: TaskDataType = JSON.parse(fileContent);
     Object.keys(newData).forEach(id => newData[id].forEach(session => session.time = new Date(session.time)))
     _taskData = newData;
@@ -29,7 +34,7 @@ export const save = async (tasks: Task[]) => {
     let taskData: TaskDataType = {};
     tasks.forEach(task => {
         if (!task.id) {
-            throw new Error(`was about to save an undefined task ID`);
+            throw new Error(`was about to save an undefined task ID ${task.line}`);
         }
         taskData[task.id] = task.sessions
     });

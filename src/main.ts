@@ -4,19 +4,31 @@ import { DEFAULT_SETTINGS } from 'settings';
 import { TaskTrackingView, VIEW_ID } from 'task-tracking-view';
 import { updateTaskFromEditor } from 'service/modify-task.service';
 import * as app from 'state/app.state';
+import * as tasks from 'state/tasks.state';
 import * as settings from 'state/settings.state';
 import * as statusBar from 'service/status-bar.service';
+import * as taskSource from 'service/task-source.service';
+import * as taskData from 'service/task-data.service';
 import * as dv from 'service/data-view.service';
+import * as poll from 'service/poll.service';
 
 
 export default class TaskTrackingPlugin extends Plugin {
     public editor_handler: Editor;
 	statusBar: HTMLElement;
 
-	async doTheThing() {
-		console.log("doTheThing");
+
+	async onload() {
+		app.set(this.app);
 		settings.set(Object.assign({}, DEFAULT_SETTINGS, await this.loadData()));
 		statusBar.set(this.addStatusBarItem());
+		poll.run(() => dv.ready(), this.setup, 200);
+	}
+	
+	setup = async() => {
+		console.log(`found ${taskSource.get().length} source tasks`);
+		console.log(`found ${(await taskData.getArray()).length} data tasks`);
+		console.log(`found ${(await tasks.get()).length} task objects`);
 
 		const editorCallback = (status: Status) => (check: boolean, editor: Editor) => {
 			if (!!check) {
@@ -29,26 +41,13 @@ export default class TaskTrackingPlugin extends Plugin {
 		this.addCommand({ id: 'inactivate-task-command', name: 'Inactivate Task', hotkeys: [{ modifiers: ["Alt"], key: "i" }], editorCheckCallback: editorCallback(Status.Inactive) });
 		this.addCommand({ id: 'complete-task-command', name: 'Complete Task', hotkeys: [{ modifiers: ["Alt"], key: "c" }], editorCheckCallback: editorCallback(Status.Complete) });
 
+		// taskSource.nukeAllIdsOnSourceTasks();
 		statusBar.set(this.addStatusBarItem());
 		this.registerView(VIEW_ID, (leaf) => new TaskTrackingView(leaf));
 		this.addRibbonIcon("dice", "Activate view", () => this.activateView());
 		// this.activateView();
 
 		statusBar.initialize(); 
-	}
-
-
-	async onload() {
-		app.set(this.app);
-		this.pollForDataViewPagesLoaded();
-	}
-	
-	async pollForDataViewPagesLoaded() {
-		if(!dv.ready()) {
-			setTimeout(() => this.pollForDataViewPagesLoaded(), 100, this);
-		 } else {
-		   this.doTheThing();
-		}
 	}
 
 	onunload() {

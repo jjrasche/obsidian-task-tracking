@@ -43,7 +43,7 @@ export const read = async(path: string): Promise<string> => {
 	return await app.adapter().read(path);
 }
 
-export const write = async(path: string, content: string = "") => {
+export const write = async(path: string, content: string = ""): Promise<void> => {
 	await app.adapter().write(path, content); 
 }
 

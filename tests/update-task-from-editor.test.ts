@@ -4,6 +4,7 @@ import { expect } from "chai";
 import { updateTaskFromEditor } from "service/modify-task.service";
 import * as tasks from 'state/tasks.state';
 import { write } from "service/file.service";
+import { TaskDataType } from "service/task-data.service";
 
 export function UpdateTaskFromEditorTests(t: TestTaskTrackingPlugin) {
     t.test("line is not a task", async () => {
@@ -75,5 +76,26 @@ export function UpdateTaskFromEditorTests(t: TestTaskTrackingPlugin) {
         const expectedData = t.combineData(initialData, newData);
         await t.expectTaskInData(expectedData);
         await t.expectTargetFile( `- [I] I am a task that replaced where the other task was\n- [C] I am a task with an ID id:${taskID}`);
+    })
+
+    t.test("fffstart tracking 2 tasks, ids should be different", async () => {
+        // arrange
+        const fileContent = `- [ ] I am a task without ID\n- [ ] I am a task without ID also`;
+        await t.setupEditorTest(fileContent);
+        
+        // act: inactivate 1st task
+        await updateTaskFromEditor(t.editor, Status.Inactive);
+        // assert: should have 1 as id of first task, second is untouched
+        let expectedData = { 1: [{time: new Date(), status: Status.Inactive}] } as TaskDataType;
+        await t.expectTaskInData(expectedData);
+        await t.expectTargetFile(`- [I] I am a task without ID id:1\n- [ ] I am a task without ID also`);
+        
+        // act: inactivate 1st task
+        t.editor.setCursor(1);
+        await updateTaskFromEditor(t.editor, Status.Inactive);
+        // assert: should have 1 as id of first task, second is untouched
+        expectedData = t.combineData(expectedData, { 2: [{time: new Date(), status: Status.Inactive}] });
+        await t.expectTaskInData(expectedData);
+        await t.expectTargetFile(`- [I] I am a task without ID id:1\n- [I] I am a task without ID also id:2`);
     })
 }

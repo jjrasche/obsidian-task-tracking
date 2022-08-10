@@ -8,9 +8,10 @@ import * as taskSource from 'service/task-source.service';
 let _tasks = new BehaviorSubject<Task[] | undefined>(undefined);
 
 export const add = async (task: Task) => {
-    const tasks = await initialize();
-    tasks.push(task);
-    console.log(`done adding task ${task.id} numTasks: ${_tasks.value?.length} contains: ${_tasks.value?.find(t => t.id === task.id)}`);
+    const existingTasks = await initialize();
+    const tasks = [...existingTasks, task];
+    set(tasks);
+    console.log(`done adding task ${task.id} numTasks: ${tasks.length} contains: ${tasks.find(t => t.id === task.id)}`);
 }
 
 export const find = async (id: number): Promise<Task> => {
@@ -21,7 +22,9 @@ export const find = async (id: number): Promise<Task> => {
     }
     return task;
 }
-export const set = (tasks: Task[] | undefined) => _tasks.next(tasks);
+export const set = (tasks: Task[] | undefined) => {
+    _tasks.next(tasks);
+}
 export const getChangeListener = (): Observable<Task[] | undefined> => _tasks.asObservable();
 export const get = async (filter ?: TaskFilter): Promise<Task[]> => {
     const tasks = await initialize();
@@ -50,15 +53,19 @@ export const persist = async () => {
     const tasks = await refreshTaskSource(); 
     // todo: consider not awaiting 
     await taskSource.save(tasks);
+    console.log("2");
     await taskData.save(tasks);
     await refreshTasks();  // do a refresh here so we are not waiting when this data is needed 
-    console.log(`done persisting numTasks:${_tasks.value?.length}`);
+    console.log(`done persisting numTasks:${tasks.length}`);
 }
 
 export const getNextID = async (): Promise<number> => {
     const tasks = await get();
+    // todo: check if there are diff ids for data and source from combined task objects
     const taskIDs = tasks.map(task => task.id).sort((a,b) => b - a)
-    return taskIDs.length === 0 ? 1 : taskIDs[0] + 1;
+    const nextID = taskIDs.length === 0 ? 1 : taskIDs[0] + 1;
+    console.log(`getNextID: nextID=${nextID}   numTasks=${tasks.length}`);
+    return nextID
 }
 
 /*
@@ -77,9 +84,15 @@ const refreshTasks = async (): Promise<Task[]> => {
             newTask.id = matchingDataTask?.id;
             newTask.setSessions(matchingDataTask.sessions);
             newTask.status = newTask.sessions.last()?.status;
+        } else {
+            // sources without data
+            console.log(`source task has no data ${newTask.text} id:${newTask.sourceID}`);
         }
         return newTask;
-    });
+    });    
+    // data without sources
+    
+
     set([...tasks]);
     return [...tasks]
 }
@@ -103,10 +116,13 @@ const refreshTaskSource = async () => {
 }
 
 const initialize = async (): Promise<Task[]> => {
+    const tasks = _tasks.value;
+    let undef = !tasks;
     if (!_tasks.value) {
-        return await refreshTasks();
+        const tasks = await refreshTasks();
     }
-    return _tasks.value;
+    console.log(`initialize: ${undef}    ${tasks?.length}`)
+    return !tasks ? [] : tasks;
 }
 
 type TaskFilter = (task: Task) => boolean;

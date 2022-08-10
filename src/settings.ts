@@ -1,5 +1,5 @@
 export const DEFAULT_SETTINGS: Settings = {
-    taskDataFileName: "Data/task-tracking.md", // needed to change this to .md as .json files in this folder were not being watched by obsidian sync for some reason
+    taskDataFileName: ".obsidian/plugins/obsidian-activity-tracking/data.json",
     onlyOneTaskActive: true,
     alwaysIncludeTagsInView: ["break", "comm", "plan/work"]
 };
