@@ -1,16 +1,21 @@
+import { access } from 'fs';
 import { Status } from 'model/status';
 import { Task } from 'model/task.model';
 import { ViewData } from 'model/view-data.model';
+import { EventRef, TAbstractFile, TFile } from 'obsidian';
 import { BehaviorSubject, Observable } from 'rxjs';
 import * as taskData from 'service/task-data.service';
 import * as taskSource from 'service/task-source.service';
+import * as app from 'state/app.state';
+import * as settings from 'state/settings.state';
 
+let _fileListener: EventRef;
 let _tasks = new BehaviorSubject<Task[] | undefined>(undefined);
 
 export const add = async (task: Task) => {
     const existingTasks = await initialize();
     const tasks = [...existingTasks, task];
-    set(tasks);
+    await set(tasks);
     // console.log(`tasks added id:${task.id}\tnumTasks:${tasks.length}\tcontains:${tasks.find(t => t.id === task.id)}`);
 }
 
@@ -22,8 +27,9 @@ export const find = async (id: number): Promise<Task> => {
     }
     return task;
 }
-export const set = (tasks: Task[] | undefined) => {
+export const set = async(tasks: Task[]) => {
     _tasks.next(tasks);
+    await setupFileChangeListener(tasks);
 }
 export const getChangeListener = (): Observable<Task[] | undefined> => _tasks.asObservable();
 export const get = async (filter ?: TaskFilter): Promise<Task[]> => {
@@ -61,6 +67,22 @@ export const getNextID = async (): Promise<number> => {
     return taskIDs.length === 0 ? 1 : taskIDs[0] + 1;
 }
 
+const setupFileChangeListener = async (tasks: Task[]) => {
+    const taskFiles = new Set([...tasks.map((task) => task.path), settings.get().taskDataFileName]);
+    if (!!_fileListener) {
+        app.get().metadataCache.offref(_fileListener);
+    }
+
+    _fileListener = app.get().metadataCache.on("changed", async (file: TFile) => {
+        if (taskFiles.has(file.path)) {
+            // console.log(`metadata changed ${file.path}`);
+            await new Promise(r => setTimeout(r, 1000));
+            taskData.reset();
+            refreshTasks();
+        }
+    });
+}
+
 /*
     create task objcet from task source and task data
     scenarios
@@ -79,15 +101,14 @@ const refreshTasks = async (): Promise<Task[]> => {
             newTask.status = newTask.sessions.last()?.status;
         } else {
             // sources without data
-            console.error(`source task has no data ${newTask.text} id:${newTask.sourceID}`);
+            console.error(`source task has no data\tid:${newTask.sourceID??newTask.id}\t${newTask.text}`);
         }
         return newTask;
     });    
     // data without sources
-    
+    console.log(`num sessions total:${data.reduce((acc, cur) => acc+= cur.sessions.length, 0)}`);
     // todo: check for this
-
-    set([...tasks]);
+    await set([...tasks]);
     return [...tasks]
 }
 
@@ -106,7 +127,7 @@ const refreshTaskSource = async () => {
             // todo: consider removing this task state
         }
     });
-    set([...tasks]);
+    await set([...tasks]);
     return [...tasks]
 }
 

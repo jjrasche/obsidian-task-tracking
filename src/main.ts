@@ -6,6 +6,7 @@ import { updateTaskFromEditor } from 'service/modify-task.service';
 import * as app from 'state/app.state';
 import * as settings from 'state/settings.state';
 import * as statusBar from 'service/status-bar.service';
+import * as taskSource from 'service/task-source.service';
 import * as dv from 'service/data-view.service';
 import * as wait from 'service/wait.service';
 

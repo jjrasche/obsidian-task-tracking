@@ -1,4 +1,4 @@
-import { App, MarkdownView, Platform, Setting, View } from "obsidian";
+import { App, MarkdownView, Platform, Setting, TFile, View, EventRef } from "obsidian";
 import * as React from "react";
 import { useEffect, useState } from "react";
 import styled from 'styled-components'
@@ -22,6 +22,8 @@ import * as appState from 'state/app.state';
 import * as settings from 'state/settings.state';
 import { Session } from "model/session";
 import { Task } from "model/task.model";
+import * as dateService from 'service/date.service';
+
 
 
 const Styles = styled.div`
@@ -60,6 +62,9 @@ export const DateFormatter = (cell: any): JSX.Element => {
 	const date = cell.getValue();
 	if (!date) {
 		return BlankCellValue;
+	}
+	if (date === dateService.min) {
+		return "-" as any;
 	}
 	return date.toLocaleDateString("en-US", {month: 'short', day: '2-digit', hour: 'numeric', minute: 'numeric', hour12: false});
 }
@@ -179,14 +184,15 @@ const desktopColumns: ColumnDef<ViewData>[] = [
 const mobileColumns: ColumnDef<ViewData>[] = [
 	{ header: '', accessorKey: 'status', cell: (cell: any) => StatusIndicator[cell.getValue() as Status], filterFn  },
 	{ header: 'text', accessorKey: 'text', cell: StringFormatter(20) },
-	{ header: 'recent', accessorKey: 'lastActive' , cell: DateSimpleTimeFormatter, filterFn },
+	{ header: 'Recent', accessorKey: 'lastActive' , cell: DateFormatter, filterFn },
+	// { header: 'recent', accessorKey: 'lastActive' , cell: DateSimpleTimeFormatter, filterFn },
 	{ header: 'Tags', accessorKey: 'tags', cell: ArrayFormatter, filterFn },
 	{ header: 'spent', accessorKey: 'timeSpent', cell: TimeFormatter, filterFn },
 	// { header: 'File', accessorKey: 'fileName', cell: (cell: any) => <a onClick={() => navigate(app, cell)}>{cell.getValue()}</a>, filterFn },
 ];
 
-// const getColumns = (): ColumnDef<ViewData>[] => Platform.isMobile ? mobileColumns : desktopColumns;
-const getColumns = (): ColumnDef<ViewData>[] => mobileColumns;
+const getColumns = (): ColumnDef<ViewData>[] => Platform.isMobile ? mobileColumns : desktopColumns;
+// const getColumns = (): ColumnDef<ViewData>[] => mobileColumns;
 
 class SessionRange {
 	task: number;
@@ -249,17 +255,11 @@ export function TaskTrackingReactView({ view }: { view: View }): JSX.Element {
 
 	useEffect(() => { 
 		refresh()
+		setSorting([{id: "lastActive", desc: true}]);
 		taskState.getChangeListener().subscribe(tasks => refresh());
 		const interval = view.registerInterval(window.setInterval(async() => updateMetrics(), 1000));
 		return () => clearInterval(interval)
 	}, []);
-	useEffect(() => {
-		if (table.getState().columnFilters[0]?.id === 'fullName') {
-		  if (table.getState().sorting[0]?.id !== 'fullName') {
-			table.setSorting([{ id: 'fullName', desc: false }])
-		  }
-		}
-	  }, [table.getState().columnFilters[0]?.id])
 
 	
 	const refresh = () => {
@@ -267,6 +267,7 @@ export function TaskTrackingReactView({ view }: { view: View }): JSX.Element {
 		taskState.getViewData().then((ts) => {
 			setLoading(false);
 			setTasks(ts);
+			console.log(`task is active\tid:${ts.find(t => t.status === Status.Active)?.id}\ttags:${ts.find(t => t.status === Status.Active)?.tags}`);
 		});
 	}
 
@@ -280,7 +281,6 @@ export function TaskTrackingReactView({ view }: { view: View }): JSX.Element {
 		const percentTimeTracked = ((trackedSeconds / (timeSinceDayStart/1000)) * 100).toFixed(2) + '%';
 		
 		setPercentTimeTracked(percentTimeTracked);
-
 	}
 
 	const rowClickHandler = async (row: ViewData, column: ColumnDef<ViewData, unknown>) => {

@@ -4,6 +4,7 @@ import { Session } from "./session";
 import { Status, StatusIndicator } from "./status";
 import { ViewData } from "./view-data.model";
 import * as date from 'service/date.service';
+import { Observable } from "rxjs";
 
 export class Task {
 	// task data properties
@@ -19,6 +20,7 @@ export class Task {
 	text: string;
 	tags: string[];
 	// housekeeping
+	fileChangeListener: Observable<void>;
 	lastActive?: Date;
 	dirty = false;
 	error = false;
@@ -84,10 +86,7 @@ export class Task {
 	}
 	setLastActive() {
 		const activeSessionTimes = this._sessions.filter(s => s.status === Status.Active).map(session => session.time.getTime());
-		if (activeSessionTimes.length === 0) {
-			return;
-		}
-		this.lastActive = date.from(Math.max(...activeSessionTimes));
+		this.lastActive = activeSessionTimes.length === 0 ? date.min : date.from(Math.max(...activeSessionTimes));
 	}
 	get sessions(): Session[] {
 		return this._sessions;
