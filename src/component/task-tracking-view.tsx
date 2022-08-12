@@ -23,6 +23,7 @@ import * as settings from 'state/settings.state';
 import { Session } from "model/session";
 import { Task } from "model/task.model";
 import * as dateService from 'service/date.service';
+import { Pie, PieChart, ResponsiveContainer } from "recharts";
 
 
 
@@ -183,12 +184,11 @@ const desktopColumns: ColumnDef<ViewData>[] = [
  
 const mobileColumns: ColumnDef<ViewData>[] = [
 	{ header: '', accessorKey: 'status', cell: (cell: any) => StatusIndicator[cell.getValue() as Status], filterFn  },
-	{ header: 'text', accessorKey: 'text', cell: StringFormatter(20) },
-	{ header: 'Recent', accessorKey: 'lastActive' , cell: DateFormatter, filterFn },
-	// { header: 'recent', accessorKey: 'lastActive' , cell: DateSimpleTimeFormatter, filterFn },
-	{ header: 'Tags', accessorKey: 'tags', cell: ArrayFormatter, filterFn },
+	{ header: 'tags', accessorKey: 'tags', cell: ArrayFormatter, filterFn },
+	// { header: 'text', accessorKey: 'text', cell: StringFormatter(20) },
+	{ header: 'recent', accessorKey: 'lastActive' , cell: DateFormatter, filterFn },
 	{ header: 'spent', accessorKey: 'timeSpent', cell: TimeFormatter, filterFn },
-	// { header: 'File', accessorKey: 'fileName', cell: (cell: any) => <a onClick={() => navigate(app, cell)}>{cell.getValue()}</a>, filterFn },
+	{ header: 'file', accessorKey: 'fileName', cell: (cell: any) => <a onClick={() => navigate(app, cell)}>{cell.getValue()}</a>, filterFn },
 ];
 
 const getColumns = (): ColumnDef<ViewData>[] => Platform.isMobile ? mobileColumns : desktopColumns;
@@ -288,14 +288,28 @@ export function TaskTrackingReactView({ view }: { view: View }): JSX.Element {
 			await updateTaskFromClick(row.id).then(() => refresh());
 		}
 	}
+
+	const data = [
+		{name: 'Group A', value: 400}, {name: 'Group B', value: 300},
+		{name: 'Group C', value: 300}, {name: 'Group D', value: 200}
+	]
 	  
 	if (loading) {
 		return <h2>loading</h2>
 	} else {
 		return (
 			<Styles>
-				<div>{timeTracked}</div>
+				{/* <div>{timeTracked}</div>
 				<div>{percentTimeTracked}</div>
+				<PieChart width={730} height={250}>
+					<Pie data={data01} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={50} fill="#8884d8" />
+					<Pie data={data02} label={renderCustomizedLabel} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={80} fill="#82ca9d" label />
+				</PieChart>
+				<ResponsiveContainer>
+					<PieChart>
+						<Pie data={data} fill="#8884d8" label={renderCustomizedLabel} nameKey="name"/>
+					</PieChart>
+				</ResponsiveContainer> */}
 				<table>
 					<thead>{table.getHeaderGroups().map(headerGroup => (
 						<tr key={headerGroup.id}>{headerGroup.headers.map(header => (
@@ -332,3 +346,12 @@ export function TaskTrackingReactView({ view }: { view: View }): JSX.Element {
 		)
 	}
 }
+
+const renderCustomizedLabel = (arg: {x: number, y: number, name: string}) => {
+	debugger;
+	return (
+	  <text x={arg.x} y={arg.y} fill="black" textAnchor="end" dominantBaseline="central">
+		{arg.name}
+	  </text>
+	);
+  };
