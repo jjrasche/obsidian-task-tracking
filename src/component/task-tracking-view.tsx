@@ -13,7 +13,7 @@ import {
 	useReactTable,
 	FilterFn,
 	Row,
-  } from '@tanstack/react-table'
+} from '@tanstack/react-table'
 import { Status, StatusIndicator, StatusWord } from "model/status";
 import { ViewData } from "model/view-data.model";
 import { updateTaskFromClick } from "service/modify-task.service";
@@ -67,7 +67,7 @@ export const DateFormatter = (cell: any): JSX.Element => {
 	if (date === dateService.min) {
 		return "-" as any;
 	}
-	return date.toLocaleDateString("en-US", {month: 'short', day: '2-digit', hour: 'numeric', minute: 'numeric', hour12: false});
+	return date.toLocaleDateString("en-US", { month: 'short', day: '2-digit', hour: 'numeric', minute: 'numeric', hour12: false });
 }
 
 export const DateSimpleTimeFormatter = (cell: any): JSX.Element => {
@@ -75,11 +75,11 @@ export const DateSimpleTimeFormatter = (cell: any): JSX.Element => {
 	if (!date) {
 		return BlankCellValue;
 	}
-	return date.toLocaleDateString("en-US", {hour: 'numeric', minute: 'numeric', hour12: false});
+	return date.toLocaleDateString("en-US", { hour: 'numeric', minute: 'numeric', hour12: false });
 }
 
 
-export const StringFormatter = (maxLength?: number): (cell: any)=> JSX.Element => (cell: any) => {
+export const StringFormatter = (maxLength?: number): (cell: any) => JSX.Element => (cell: any) => {
 	let value = cell.getValue();
 	if (!value) {
 		return BlankCellValue;
@@ -95,7 +95,7 @@ export const NumberFormatter = (precision: number = 2) => (cell: any): JSX.Eleme
 	if (!value) {
 		return BlankCellValue;
 	}
-	if (typeof(value) != "number") {
+	if (typeof (value) != "number") {
 		return InvalidCellValue;
 	}
 	return value.toFixed(precision) as any;
@@ -118,7 +118,7 @@ export const TimeFormatter = (cell: any): JSX.Element => {
 	if (!seconds) {
 		return BlankCellValue;
 	}
-	if (typeof(seconds) != "number") {
+	if (typeof (seconds) != "number") {
 		return InvalidCellValue;
 	}
 	return SecondsToTime(seconds) as any;
@@ -130,9 +130,9 @@ const SecondsToTime = (seconds: number): string => {
 	const hours = Math.floor(seconds / 3600) % 24;
 	const minutes = Math.floor(seconds / 60) % 60;
 	const sec = seconds % 60;
-	
+
 	return `${!!days ? days.toString() + ':' : ''}${!!hours ? hours.toString() + ':' : ''}${!!minutes ? minutes.toString() + ':' : ''}${sec}`;
-} 
+}
 
 const navigate = (app: App, cell: any) => {
 	const row = cell.row.original as ViewData;
@@ -142,9 +142,9 @@ const navigate = (app: App, cell: any) => {
 			const view = app.workspace.getActiveViewOfType(MarkdownView);
 			const editor = view?.editor;
 			if (!!editor) {
-				editor.scrollIntoView({ from: {line: row.line ?? 0, ch: 0}, to: {line: row.line ?? 0, ch: 0}}, true);
+				editor.scrollIntoView({ from: { line: row.line ?? 0, ch: 0 }, to: { line: row.line ?? 0, ch: 0 } }, true);
 			}
-		}); 
+		});
 	}
 }
 
@@ -164,29 +164,29 @@ const filterFn: FilterFn<any> = (row: Row<ViewData>, columnId, value, addMeta) =
 		if (calculatedTags.some(tag => includeTags.includes(tag))) {
 			return true;
 		}
-	} catch(e) {
+	} catch (e) {
 		console.log(e);
 	}
 	return val.toString().toLowerCase().contains(value.toLowerCase());
-}	
+}
 
 const desktopColumns: ColumnDef<ViewData>[] = [
-	{ header: 'Status', accessorKey: 'status', cell: (cell: any) => StatusWord[cell.getValue() as Status], filterFn  },
+	{ header: 'Status', accessorKey: 'status', cell: (cell: any) => StatusWord[cell.getValue() as Status], filterFn },
 	{ header: 'Text', accessorKey: 'text' },
-	{ header: 'Recent', accessorKey: 'lastActive' , cell: DateFormatter, filterFn },
+	{ header: 'Recent', accessorKey: 'lastActive', cell: DateFormatter, filterFn },
 	{ header: 'Tags', accessorKey: 'tags', cell: ArrayFormatter, filterFn },
-	{ header: 'Time Spent', accessorKey: 'timeSpent', cell: TimeFormatter, filterFn },
+	{ header: 'Time Spent', accessorKey: 'timeSpentToday', cell: TimeFormatter, filterFn },
 	{ header: 'Time To Close', accessorKey: 'timeToClose', cell: TimeFormatter, filterFn },
 	{ header: '# Switches', accessorKey: 'numSwitches', filterFn },
 	{ header: 'File', accessorKey: 'fileName', cell: (cell: any) => <a onClick={() => navigate(app, cell)}>{cell.getValue()}</a>, filterFn },
 	{ header: 'ID', accessorKey: 'id' },
 ];
- 
+
 const mobileColumns: ColumnDef<ViewData>[] = [
-	{ header: '', accessorKey: 'status', cell: (cell: any) => StatusIndicator[cell.getValue() as Status], filterFn  },
+	{ header: '', accessorKey: 'status', cell: (cell: any) => StatusIndicator[cell.getValue() as Status], filterFn },
 	{ header: 'tags', accessorKey: 'tags', cell: ArrayFormatter, filterFn },
 	// { header: 'text', accessorKey: 'text', cell: StringFormatter(20) },
-	{ header: 'recent', accessorKey: 'lastActive' , cell: DateFormatter, filterFn },
+	{ header: 'recent', accessorKey: 'lastActive', cell: DateFormatter, filterFn },
 	{ header: 'spent', accessorKey: 'timeSpent', cell: TimeFormatter, filterFn },
 	{ header: 'file', accessorKey: 'fileName', cell: (cell: any) => <a onClick={() => navigate(app, cell)}>{cell.getValue()}</a>, filterFn },
 ];
@@ -204,7 +204,7 @@ class SessionRange {
 		this.task = task.id;
 		this.tags = task.tags;
 		this.start = active.time,
-		this.end = !!next ? next.time : new Date()
+			this.end = !!next ? next.time : new Date()
 	}
 
 	// assumption can use new date variable as this will be called quickly after other related functionality
@@ -221,10 +221,10 @@ class SessionRange {
 	}
 }
 
-const getTodaysSessionRanges = async(): Promise<SessionRange[]> => {
+const getTodaysSessionRanges = async (): Promise<SessionRange[]> => {
 	const tasks = await taskState.get();
 	const now = (new Date);
-	const todayDate = now.toDateString(); 
+	const todayDate = now.toDateString();
 	const sessionRanges: SessionRange[] = []
 	tasks.forEach(task => {
 		if (!!task.sessions) {
@@ -248,38 +248,42 @@ export function TaskTrackingReactView({ view }: { view: View }): JSX.Element {
 	const [timeTracked, setTimeTracked] = useState("");
 	const [percentTimeTracked, setPercentTimeTracked] = useState("");
 	const [tasks, setTasks] = useState<ViewData[]>([]);
-	const [sorting, setSorting] = React.useState<SortingState>([{id: "lastActive", desc: true}]);
-	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([{ id: "lastActive", value: (new Date()).toLocaleDateString("en-US", {month: 'short', day: '2-digit' }) }]);
-	
+	const [chartData, setChartData] = useState<{ name: string, value: number }[]>([]);
+	const [sorting, setSorting] = React.useState<SortingState>([{ id: "lastActive", desc: true }]);
+	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([{ id: "lastActive", value: (new Date()).toLocaleDateString("en-US", { month: 'short', day: '2-digit' }) }]);
+
 	const table = useReactTable({ data: tasks, columns, state: { sorting, columnFilters }, onSortingChange: setSorting, onColumnFiltersChange: setColumnFilters, getCoreRowModel: getCoreRowModel(), getSortedRowModel: getSortedRowModel(), getFilteredRowModel: getFilteredRowModel() });
 
-	useEffect(() => { 
+	useEffect(() => {
 		refresh()
-		setSorting([{id: "lastActive", desc: true}]);
+		setSorting([{ id: "lastActive", desc: true }]);
 		taskState.getChangeListener().subscribe(tasks => refresh());
-		const interval = view.registerInterval(window.setInterval(async() => updateMetrics(), 1000));
+		const interval = view.registerInterval(window.setInterval(async () => updateMetrics(), 1000));
 		return () => clearInterval(interval)
 	}, []);
 
-	
+
 	const refresh = () => {
 		setLoading(true);
 		taskState.getViewData().then((ts) => {
 			setLoading(false);
 			setTasks(ts);
+			const cd = ts.filter(task => !!task.timeSpentToday && task.timeSpentToday > 0)
+				.map(task => ({ name: task.text ?? 'N/A', value: task.timeSpentToday ?? 0 }));
+			setChartData(cd);
 			console.log(`task is active\tid:${ts.find(t => t.status === Status.Active)?.id}\ttags:${ts.find(t => t.status === Status.Active)?.tags}`);
 		});
 	}
 
-	const updateMetrics = async() => {
+	const updateMetrics = async () => {
 		const ranges = await getTodaysSessionRanges();
-		const trackedSeconds = ranges.reduce((acc, cur) =>  acc + cur.duration, 0) / 1000;
+		const trackedSeconds = ranges.reduce((acc, cur) => acc + cur.duration, 0) / 1000;
 		const time = SecondsToTime(trackedSeconds);
 		setTimeTracked(time);
 		// don't include sleeping so 7- 10:30 = 15.5 hours
 		const timeSinceDayStart = new Date().getTime() - (new Date((new Date()).setHours(7))).getTime();
-		const percentTimeTracked = ((trackedSeconds / (timeSinceDayStart/1000)) * 100).toFixed(2) + '%';
-		
+		const percentTimeTracked = ((trackedSeconds / (timeSinceDayStart / 1000)) * 100).toFixed(2) + '%';
+
 		setPercentTimeTracked(percentTimeTracked);
 	}
 
@@ -289,47 +293,60 @@ export function TaskTrackingReactView({ view }: { view: View }): JSX.Element {
 		}
 	}
 
-	const data = [
-		{name: 'Group A', value: 400}, {name: 'Group B', value: 300},
-		{name: 'Group C', value: 300}, {name: 'Group D', value: 200}
-	]
-	  
+	const data01 = [
+		{ "name": "Group A", "value": 400 },
+		{ "name": "Group B", "value": 300 },
+		{ "name": "Group C", "value": 300 },
+		{ "name": "Group D", "value": 200 },
+		{ "name": "Group E", "value": 278 },
+		{ "name": "Group F", "value": 189 }
+	];
+	const data02 = [
+		{ "name": "Group A", "value": 2400 },
+		{ "name": "Group B", "value": 4567 },
+		{ "name": "Group C", "value": 1398 },
+		{ "name": "Group D", "value": 9800 },
+		{ "name": "Group E", "value": 3908 },
+		{ "name": "Group F", "value": 4800 }
+	];
+	/*
+		  format of data value -> timespentToday
+	  filter all out that are 0
+	  show text as label 
+	*/
+
 	if (loading) {
 		return <h2>loading</h2>
 	} else {
 		return (
 			<Styles>
-				{/* <div>{timeTracked}</div>
+				<div>{timeTracked}</div>
 				<div>{percentTimeTracked}</div>
-				<PieChart width={730} height={250}>
-					<Pie data={data01} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={50} fill="#8884d8" />
-					<Pie data={data02} label={renderCustomizedLabel} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={80} fill="#82ca9d" label />
-				</PieChart>
-				<ResponsiveContainer>
-					<PieChart>
-						<Pie data={data} fill="#8884d8" label={renderCustomizedLabel} nameKey="name"/>
+				<ResponsiveContainer width={'99%'} height={300}>
+					<PieChart width={730} height={250}>
+						<Pie data={chartData} label={renderCustomizedLabel} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} fill="#8884d8" />
 					</PieChart>
-				</ResponsiveContainer> */}
+				</ResponsiveContainer>
 				<table>
 					<thead>{table.getHeaderGroups().map(headerGroup => (
 						<tr key={headerGroup.id}>{headerGroup.headers.map(header => (
-							<th key={header.id} colSpan={header.colSpan}> 
-							{ header.isPlaceholder ? null : (
-								<>
-									<div {...{ className: header.column.getCanSort() ? 'cursor-pointer select-none' : '', onClick: header.column.getToggleSortingHandler() }}>
-										{ flexRender(header.column.columnDef.header, header.getContext()) }
-										{{ asc: ' 🔼', desc: ' 🔽' }[header.column.getIsSorted() as string] ?? null}
-									</div>
-									{/* {header.column.getCanFilter() ? (
+							<th key={header.id} colSpan={header.colSpan}>
+								{header.isPlaceholder ? null : (
+									<>
+										<div {...{ className: header.column.getCanSort() ? 'cursor-pointer select-none' : '', onClick: header.column.getToggleSortingHandler() }}>
+											{flexRender(header.column.columnDef.header, header.getContext())}
+											{{ asc: ' 🔼', desc: ' 🔽' }[header.column.getIsSorted() as string] ?? null}
+										</div>
+										{/* {header.column.getCanFilter() ? (
 										<div>
 											<input onChange={ e => header.column.setFilterValue(e.target.value) }/>
 										</div>
 									) : null} */}
-							  </>
-							)}
+									</>
+								)}
 
 
-						  </th>
+							</th>
 						))}
 						</tr>
 					))}
@@ -347,11 +364,23 @@ export function TaskTrackingReactView({ view }: { view: View }): JSX.Element {
 	}
 }
 
-const renderCustomizedLabel = (arg: {x: number, y: number, name: string}) => {
-	debugger;
+const RADIAN = Math.PI / 180;
+
+const renderCustomizedLabel = (arg: { cx: number, cy: number, name: string, midAngle: number, innerRadius: number, outerRadius: number, percent: number }) => {
+	const radius = arg.innerRadius + (arg.outerRadius - arg.innerRadius) * 1.25;
+	const x = arg.cx + radius * Math.cos(-arg.midAngle * RADIAN);
+	const y = arg.cy + radius * Math.sin(-arg.midAngle * RADIAN);
+	const innerRadius = arg.innerRadius + (arg.outerRadius - arg.innerRadius) * .5;
+	const xInner = arg.cx + innerRadius * Math.cos(-arg.midAngle * RADIAN);
+	const yInner = arg.cy + innerRadius * Math.sin(-arg.midAngle * RADIAN);
 	return (
-	  <text x={arg.x} y={arg.y} fill="black" textAnchor="end" dominantBaseline="central">
-		{arg.name}
-	  </text>
+		<>
+			<text x={x} y={y} fill="white" textAnchor={x > arg.cx ? 'start' : 'end'} dominantBaseline="central">
+				{arg.name}
+			</text>
+			<text x={xInner} y={yInner} fill="white" textAnchor={xInner > arg.cx ? 'start' : 'end'} dominantBaseline="central">
+				{`${(arg.percent * 100).toFixed(0)}%`}
+			</text>
+		</>
 	);
-  };
+};

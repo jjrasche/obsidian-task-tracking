@@ -7,6 +7,7 @@ export class ViewData {
 	start: Date;
 	lastActive?: Date;
 	timeSpent?: number;	// in seconds
+	timeSpentToday?: number;	// in seconds
 	timeToClose?: number;	// in seconds
 	numSwitches: number;
 	fileName?: string;

@@ -6,6 +6,7 @@ import { ViewData } from "./view-data.model";
 import * as date from 'service/date.service';
 import { Observable } from "rxjs";
 
+
 export class Task {
 	// task data properties
 	id: number;
@@ -50,14 +51,19 @@ export class Task {
 		return textWords?.join(" ");
 	}
 
-	toView(): ViewData {
-		const timeSpent = this._sessions.reduce((acc, cur, idx) => {
-			if (cur.status === Status.Active) {
+	toView(): ViewData {``
+		let timeSpent = 0, timeSpentToday = 0;
+		this._sessions.forEach((session, idx) => {
+			if (session.status === Status.Active) {
 				const next = this._sessions[idx+1] ?? {time: date.now()};
-				const currentSessionLength = (next.time.getTime() - cur.time.getTime())/1000;
-				return acc + currentSessionLength;
+				timeSpent += (next.time.getTime() - session.time.getTime()) / 1000;
+				if (date.isToday(session.time) || date.isToday(next.time)) {
+					timeSpentToday += (
+						(date.isToday(next.time) ?  next.time.getTime() : date.now().getTime()) -
+						(date.isToday(session.time) ?  session.time.getTime() : (new Date()).dateOnly().getTime())
+						) / 1000;
+				}
 			}
-			return acc;
 		}, 0);
 		const first = this._sessions[0];
 		const last = this._sessions[this._sessions.length - 1];
@@ -68,6 +74,7 @@ export class Task {
 			start: first?.time,
 			lastActive: this.lastActive,
 			timeSpent,
+			timeSpentToday,
 			timeToClose: (!!last && last.status === Status.Complete) ? ((last.time.getTime() - first.time.getTime()) / 1000) : undefined,
 			numSwitches: this._sessions.filter(session => session.status === Status.Active).length,
 			fileName: this.path,
