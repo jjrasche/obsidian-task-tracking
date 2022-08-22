@@ -6,6 +6,7 @@ import * as settings from 'state/settings.state';
 import * as tasks from 'state/tasks.state';
 import * as taskSource from 'service/task-source.service';
 import * as statusBar from 'service/status-bar.service';
+import * as log from 'service/logging.service';
 
 export const updateTaskFromEditor = async (editor: Editor, status: Status) => {
     const cursor = editor.getCursor();
@@ -28,7 +29,7 @@ export const changeTaskStatus = async (task: Task, status: Status) => {
     if (settings.get().onlyOneTaskActive && status === Status.Active) {
         await inactivateAllActiveTasks();
     }
-    task.setStatus(status);
+    await task.setStatus(status);
     await tasks.persist();
     statusBar.modify(task);
 }
@@ -36,7 +37,7 @@ export const changeTaskStatus = async (task: Task, status: Status) => {
 export const inactivateAllActiveTasks = async () => {
     const activeTasks = await tasks.get(tasks.isActive);
     for (const task of activeTasks) {
-        task.setStatus(Status.Inactive);
+        await task.setStatus(Status.Inactive);
     }
 }
 
@@ -51,7 +52,7 @@ const createNewTaskIfNeeded = async (cursor: EditorPosition, line: string): Prom
         const newTask = new Task(sourceTask);
         newTask.id = await tasks.getNextID();
         newTask.saved = false;
-        console.log(`creating new task line:${line}\tid:${newTask.id}`);
+        await log.toConsoleAndFile(`creating new task ${newTask.toLog()}`);
         await tasks.add(newTask);
         return newTask;
     }

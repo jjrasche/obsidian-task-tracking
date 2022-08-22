@@ -165,7 +165,6 @@ const filterFn: FilterFn<any> = (row: Row<ViewData>, columnId, value, addMeta) =
 			return true;
 		}
 	} catch (e) {
-		console.log(e);
 	}
 	return val.toString().toLowerCase().contains(value.toLowerCase());
 }
@@ -187,7 +186,7 @@ const mobileColumns: ColumnDef<ViewData>[] = [
 	{ header: 'tags', accessorKey: 'tags', cell: ArrayFormatter, filterFn },
 	// { header: 'text', accessorKey: 'text', cell: StringFormatter(20) },
 	{ header: 'recent', accessorKey: 'lastActive', cell: DateFormatter, filterFn },
-	{ header: 'spent', accessorKey: 'timeSpent', cell: TimeFormatter, filterFn },
+	{ header: 'spent', accessorKey: 'timeSpentToday', cell: TimeFormatter, filterFn },
 	{ header: 'file', accessorKey: 'fileName', cell: (cell: any) => <a onClick={() => navigate(app, cell)}>{cell.getValue()}</a>, filterFn },
 ];
 
@@ -320,13 +319,13 @@ export function TaskTrackingReactView({ view }: { view: View }): JSX.Element {
 	} else {
 		return (
 			<Styles>
-				<div>{timeTracked}</div>
+				{/* <div>{timeTracked}</div>
 				<div>{percentTimeTracked}</div>
 				<ResponsiveContainer width={'99%'} height={300}>
 					<PieChart width={730} height={250}>
 						<Pie data={chartData} label={renderCustomizedLabel} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} fill="#8884d8" />
 					</PieChart>
-				</ResponsiveContainer>
+				</ResponsiveContainer> */}
 				<table>
 					<thead>{table.getHeaderGroups().map(headerGroup => (
 						<tr key={headerGroup.id}>{headerGroup.headers.map(header => (

@@ -1,9 +1,10 @@
 import { Pos } from "obsidian";
 import { STask } from "obsidian-dataview";
 import { Session } from "./session";
-import { Status, StatusIndicator } from "./status";
+import { Status, StatusIndicator, StatusWord } from "./status";
 import { ViewData } from "./view-data.model";
 import * as date from 'service/date.service';
+import * as log from 'service/logging.service';
 import { Observable } from "rxjs";
 
 
@@ -42,11 +43,15 @@ export class Task {
 		return ret;
 	}
 
+	public toLog(): string {
+		return `sourceId:${this.sourceID}, dataID:${this.id}, text:${this.text}, sessions:${this.sessions.length}, file:${this.path}, line:${this.line}`;
+	}
+
 	get viewText(): string {
 		let textWords = this.text.split(/\s/);
-		while(textWords?.last()?.contains("#")) { 
-			textWords.pop();
-		}
+		// while(textWords?.last()?.contains("#")) { 
+		// 	textWords.pop();
+		// }
 		textWords = textWords?.map(w => w.replace("#", ""));
 		return textWords?.join(" ");
 	}
@@ -58,9 +63,11 @@ export class Task {
 				const next = this._sessions[idx+1] ?? {time: date.now()};
 				timeSpent += (next.time.getTime() - session.time.getTime()) / 1000;
 				if (date.isToday(session.time) || date.isToday(next.time)) {
+					const startOfDay = (new Date())
+					startOfDay.setHours(0,0,0,0);
 					timeSpentToday += (
 						(date.isToday(next.time) ?  next.time.getTime() : date.now().getTime()) -
-						(date.isToday(session.time) ?  session.time.getTime() : (new Date()).dateOnly().getTime())
+						(date.isToday(session.time) ?  session.time.getTime() : startOfDay.getTime())
 						) / 1000;
 				}
 			}
@@ -99,9 +106,10 @@ export class Task {
 		return this._sessions;
 	}
 	
-	setStatus(status: Status) { 
+	async setStatus(status: Status) { 
 		if (this.status === status) return;	// do not add the same status as current status
 		const time = date.now();
+		await log.toConsoleAndFile(`changing status of task ${this.toLog()}\t\t${this.status !== undefined ? StatusWord[this.status] : "<blank>"} -> ${StatusWord[status]}`);
 		this.addSession({ time, status });
 		this.status = status;
 		this.dirty = true;

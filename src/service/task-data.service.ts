@@ -1,6 +1,7 @@
 import { Session } from "../model/session";
 import * as file from 'service/file.service';
 import * as settings from 'state/settings.state';
+import * as log from 'service/logging.service';
 import { Task } from "model/task.model";
 
 export type TaskDataType = {[key: string]: Session[]};
@@ -29,16 +30,25 @@ export const getArray = async (): Promise<TaskData[]> => {
     return Object.keys(taskData).map(key => ({id: parseInt(key), sessions: taskData[key]}));
 }
 export const save = async (tasks: Task[]) => {
-    reset();
     let taskData: TaskDataType = {};
+    console.log(`saved task data ${tasks.length}`);
     tasks.forEach(task => {
         if (!task.id) {
-            throw new Error(`was about to save an undefined task ID ${task.line}`);
+            log.errorToConsoleAndFile(`was about to save an undefined task ID ${task.line}`, true);
         }
         taskData[task.id] = task.sessions
     });
+    // check to not delete task data key
+    reset()
+    const currentData = await get();
+    const currentIds = Object.keys(currentData).map(id => parseInt(id));
+    const taskIds = new Set(tasks.map(task => task.id));
+    const idsToDelete = currentIds.filter(id => !taskIds.has(id));
+    if (idsToDelete.length !== 0) {
+        log.errorToConsoleAndFile(`was about to delete ${idsToDelete}`, true);
+    }
+    // save
     const dataString = JSON.stringify(taskData);
     await file.write(settings.get().taskDataFileName, dataString);
-    console.log(`saved task data ${tasks.length}`);
-
+    reset();
 }

@@ -23,7 +23,9 @@ export default class TaskTrackingPlugin extends Plugin {
 
 	async onload() {
 		app.set(this.app);
-		settings.set(Object.assign({}, DEFAULT_SETTINGS, await this.loadData()));
+		const logFile = Platform.isMobile ? ".obsidian/plugins/obsidian-activity-tracking/log(mobile).txt"
+			: ".obsidian/plugins/obsidian-activity-tracking/log(computer).txt"
+		settings.set(Object.assign({}, {...DEFAULT_SETTINGS, logFileName: logFile}, await this.loadData()));
 		statusBar.set(this.addStatusBarItem());
 		wait.until(() => dv.ready(), this.setup, 200);
 	}
@@ -43,15 +45,10 @@ export default class TaskTrackingPlugin extends Plugin {
 		// taskSource.nukeAllIdsOnSourceTasks();
 		statusBar.set(this.addStatusBarItem());
 		this.registerView(VIEW_ID, (leaf) => new TaskTrackingView(leaf));
-		if (Platform.isMobile) {
-			this.addRibbonIcon(circleAIcon, "Activate Task", () => updateTaskFromEditor(this.editor, Status.Active));
-		} else {
-			this.addRibbonIcon("view", "Show Task View", () => this.activateView());
-
-		}
+		this.addRibbonIcon("view", "Show Task View", () => this.activateView());
 		// this.activateView();
 
-		statusBar.initialize(); 
+		statusBar.initialize();
 	}
 
 	onunload() {

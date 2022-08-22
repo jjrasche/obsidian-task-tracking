@@ -8,6 +8,7 @@ import * as taskData from 'service/task-data.service';
 import * as taskSource from 'service/task-source.service';
 import * as app from 'state/app.state';
 import * as settings from 'state/settings.state';
+import * as log from 'service/logging.service';
 
 let _fileListener: EventRef;
 let _tasks = new BehaviorSubject<Task[] | undefined>(undefined);
@@ -16,14 +17,15 @@ export const add = async (task: Task) => {
     const existingTasks = await initialize();
     const tasks = [...existingTasks, task];
     await set(tasks);
-    // console.log(`tasks added id:${task.id}\tnumTasks:${tasks.length}\tcontains:${tasks.find(t => t.id === task.id)}`);
 }
 
 export const find = async (id: number): Promise<Task> => {
     const tasks = await initialize();
     const task = tasks.find(task => task.id === id);
     if (!task) {
-        throw new Error(`could not find task with id:'${id}'`);
+        const message = `could not find task with id:'${id}'`;
+        log.errorToConsoleAndFile(message);
+        throw new Error(message);
     }
     return task;
 }
@@ -75,8 +77,7 @@ const setupFileChangeListener = async (tasks: Task[]) => {
 
     _fileListener = app.get().metadataCache.on("changed", async (file: TFile) => {
         if (taskFiles.has(file.path)) {
-            // console.log(`metadata changed ${file.path}`);
-            await new Promise(r => setTimeout(r, 1000));
+            await new Promise(r => setTimeout(r, 1000)); // wait for change to propigate through obsidian data
             taskData.reset();
             refreshTasks();
         }
@@ -92,22 +93,23 @@ const setupFileChangeListener = async (tasks: Task[]) => {
 const refreshTasks = async (): Promise<Task[]> => {
     const data = await taskData.getArray();
     const source = taskSource.get();
+    log.toConsoleAndFile(`refreshTasks:\tdata: #tasks:${Object.keys(data).length} #sessions:${Object.keys(data).map((id: string) => data[parseInt(id)]).reduce((acc, cur) => acc + cur.sessions.length, 0)}\tsource: #tasks:${source.length}`);
+    if (Object.keys(data).length != source.length) {
+        log.toConsoleAndFile(`{data:[${Object.keys(data)}], source:[${source.map(s => s.text).join(", ")}]}`);
+    }
     const tasks = source.map(sourceTask => {
-        const newTask = new Task(sourceTask);
-        const matchingDataTask = data.find(dataTask => dataTask.id === newTask.sourceID);
+        const task = new Task(sourceTask);
+        const matchingDataTask = data.find(dataTask => dataTask.id === task.sourceID);
         if (!!matchingDataTask) {
-            newTask.id = matchingDataTask?.id;
-            newTask.setSessions(matchingDataTask.sessions);
-            newTask.status = newTask.sessions.last()?.status;
+            task.id = matchingDataTask?.id;
+            task.setSessions(matchingDataTask.sessions);
+            task.status = task.sessions.last()?.status;
         } else {
             // sources without data
-            console.error(`source task has no data\tid:${newTask.sourceID??newTask.id}\t${newTask.text}`);
+            log.errorToConsoleAndFile(`source task has no data\t${task.toLog()}`);
         }
-        return newTask;
-    });    
-    // data without sources
-    console.log(`num sessions total:${data.reduce((acc, cur) => acc+= cur.sessions.length, 0)}`);
-    // todo: check for this
+        return task;
+    });
     await set([...tasks]);
     return [...tasks]
 }
@@ -117,14 +119,22 @@ const refreshTasks = async (): Promise<Task[]> => {
 const refreshTaskSource = async () => {
     const sourceTasks = taskSource.get().map(source => new Task(source));
     let tasks = await get();
+    // testing
+    for (const task of tasks) {
+        const match = sourceTasks.find(st => st.sourceID === task.id);
+        if (match?.text != task.text) {
+            await log.toConsoleAndFile(`refreshTaskSource[${(task.dirty && task.saved) ? 'dirty' : 'clean'}]:task state:'${task.text}' is different than source:'${match?.text}'\t\tfor:${task.toLog()}`);
+        }
+    }
+
     tasks.filter(t => t.dirty && t.saved).forEach(task => {
         const match = sourceTasks.find(st => st.sourceID === task.id);
         if (!!match) {
             task.line = match.line;
         } else {
+            // persist is called after ever trigger, so this should only happen when a task is changed then deleted. 
             task.error = true;
-            console.error(`source for task:${task.id} cannot be found in file ${task.path}`);
-            // todo: consider removing this task state
+            log.errorToConsoleAndFile(`source was deleted for task:${task.toLog()}\t\tcannot be found at file:${task.path}, line:${task.line}`);
         }
     });
     await set([...tasks]);
@@ -133,6 +143,7 @@ const refreshTaskSource = async () => {
 
 const initialize = async (): Promise<Task[]> => {
     if (!_tasks.value) {
+        await log.toConsoleAndFile('initializing');
         return await refreshTasks();
     }
     return _tasks.value;

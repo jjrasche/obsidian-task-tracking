@@ -4,6 +4,7 @@ import { Task } from 'model/task.model';
 import * as dv from 'service/data-view.service';
 import * as file from "service/file.service";
 import * as wait from 'service/wait.service';
+import * as log from 'service/logging.service';
 
 export const get = (): STask[] => dv.allManagedTasks();
 
@@ -32,7 +33,7 @@ export const save = async (tasks: Task[]) => {
         task.dirty = false;
         task.saved = true;
         sourceUpdateWaits.push(wait.until(() => dv.taskInDv(task.id), () => {}, 200));
-        console.log(`updated task source: id:${task.id}\n\tfrom:'${originalLine}'\n\tupdated:${newLine}`);
+        await log.toConsoleAndFile(`updated task source: ${task.toLog()}\tfrom:'${originalLine}'\tupdated:${newLine}`);
     };
     await Promise.all(sourceUpdateWaits);
 }
