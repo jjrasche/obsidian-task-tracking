@@ -34,7 +34,8 @@ export const save = async (tasks: Task[]) => {
     console.log(`saved task data ${tasks.length}`);
     tasks.forEach(task => {
         if (!task.id) {
-            log.errorToConsoleAndFile(`was about to save an undefined task ID ${task.line}`, true);
+            log.errorToConsoleAndFile(`was about to save an undefined task:${task.toLog()}`, true);
+            return;
         }
         taskData[task.id] = task.sessions
     });

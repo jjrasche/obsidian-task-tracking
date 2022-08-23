@@ -44,7 +44,7 @@ export class Task {
 	}
 
 	public toLog(): string {
-		return `sourceId:${this.sourceID}, dataID:${this.id}, text:${this.text}, sessions:${this.sessions.length}, file:${this.path}, line:${this.line}`;
+		return `sourceId:${this.sourceID}, dataID:${this.id}, text:${this.text}, sessions:${this.sessions.length}, file:${this.path}, line:${this.line}, dirty:${this.dirty}, saved:${this.saved}`;
 	}
 
 	get viewText(): string {
