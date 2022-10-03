@@ -93,12 +93,51 @@ const setupFileChangeListener = async (tasks: Task[]) => {
 const refreshTasks = async (): Promise<Task[]> => {
     const data = await taskData.getArray();
     const source = taskSource.get();
+    // check for duplicates
+    const sourcesText = source.map(s => s.text);
+    const dupSources = sourcesText.filter((text, index) => sourcesText.indexOf(text) != index);
+    if (dupSources.length != 0) {
+        log.toConsoleAndFile(`duplicate source tasks found: [${dupSources.join(", ")}]`);
+    }
+    // check that source and data counts match
     log.toConsoleAndFile(`refreshTasks:\tdata: #tasks:${Object.keys(data).length} #sessions:${Object.keys(data).map((id: string) => data[parseInt(id)]).reduce((acc, cur) => acc + cur.sessions.length, 0)}\tsource: #tasks:${source.length}`);
     if (Object.keys(data).length != source.length) {
-        log.toConsoleAndFile(`{data:[${Object.keys(data)}], source:[${source.map(s => s.text).join(", ")}]}`);
+        // const sourceTaskText = source.map(s => new Task(s)).sort((a, b) => a.sourceID - b.sourceID).map(s => {
+        //     const text = s.text.replaceAll(/'/g, "").replaceAll(/"/g, "").replaceAll(/`/g, "").replaceAll(/\[\[/g, "").replaceAll(/]]/g, "");
+        //     if (s.text.contains("`")) {
+        //         // debugger;
+        //     }
+        //     return `'${text} id:${s.sourceID}'`
+        // }).join(", ");
+
+        // log.toConsoleAndFile(`{data:[${data.map(d => d.id)}], source:[${sourceTaskText}`);
+        // data without source task
+        const sourceIDs = source.map(s => new Task(s).sourceID);
+        const dataIDsWithNoSource = data.map(d => d.id).filter(id => !sourceIDs.includes(id));
+        if (dataIDsWithNoSource.length != 0) {
+            log.errorToConsoleAndFile(`data has no source\n[${dataIDsWithNoSource.join(", ")}]`);
+        }
+        const dataIDs = data.map(d => d.id);
+        const sourceIDsWithoutData = sourceIDs.filter(id => !dataIDs.includes(id));
+        if (sourceIDsWithoutData.length != 0) {
+            log.errorToConsoleAndFile(`source has no data\n[${sourceIDsWithoutData.join(", ")}]`);
+        }
+        let idMap: {[key: number]: number} = {};
+        sourceIDs.forEach(id => {
+            if (idMap[id] !== undefined) {
+                idMap[id] = idMap[id] + 1;
+            } else {
+                idMap[id] = 1;
+            }
+        });
+        const duplicateSourceIDs = Object.keys(idMap).filter(id => idMap[parseInt(id)] > 1);
+        if (duplicateSourceIDs.length != 0) {
+            log.errorToConsoleAndFile(`source has duplicate ids\n[${duplicateSourceIDs.join(", ")}]`);
+        }
+
     }
-    const tasks = source.map(sourceTask => {
-        const task = new Task(sourceTask);
+    let tasks = source.map(sourceTask => new Task(sourceTask))
+    tasks = tasks.map(task => {
         const matchingDataTask = data.find(dataTask => dataTask.id === task.sourceID);
         if (!!matchingDataTask) {
             task.id = matchingDataTask?.id;

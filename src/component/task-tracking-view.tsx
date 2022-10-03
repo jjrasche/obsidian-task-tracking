@@ -13,6 +13,7 @@ import {
 	useReactTable,
 	FilterFn,
 	Row,
+	Table,
 } from '@tanstack/react-table'
 import { Status, StatusIndicator, StatusWord } from "model/status";
 import { ViewData } from "model/view-data.model";
@@ -24,7 +25,8 @@ import { Session } from "model/session";
 import { Task } from "model/task.model";
 import * as dateService from 'service/date.service';
 import { Pie, PieChart, ResponsiveContainer } from "recharts";
-
+import Autocomplete from "react-autocomplete";
+// import * as Autocomplete from "react-autocomplete";
 
 
 const Styles = styled.div`
@@ -148,7 +150,7 @@ const navigate = (app: App, cell: any) => {
 	}
 }
 
-const filterFn: FilterFn<any> = (row: Row<ViewData>, columnId, value, addMeta) => {
+const filterFn: FilterFn<any> = (row: Row<ViewData>, columnId, value) => {
 	let val: any = row.getValue(columnId);
 	const columnDef = getColumns().find((col: any) => col.accessorKey === columnId);
 	const cell = row.getAllCells().find(cell => cell.column.id === columnId)
@@ -190,8 +192,18 @@ const mobileColumns: ColumnDef<ViewData>[] = [
 	{ header: 'file', accessorKey: 'fileName', cell: (cell: any) => <a onClick={() => navigate(app, cell)}>{cell.getValue()}</a>, filterFn },
 ];
 
-const getColumns = (): ColumnDef<ViewData>[] => Platform.isMobile ? mobileColumns : desktopColumns;
-// const getColumns = (): ColumnDef<ViewData>[] => mobileColumns;
+const getColumns = (tableState: TableState = TableState.daily): ColumnDef<ViewData>[] => {
+	const timeSpentKey = tableState === TableState.daily ? 'timeSpentToday' : 'timeSpent';
+	let columns = Platform.isMobile ? mobileColumns : desktopColumns;
+	// const columnNum = columns.findIndex(col => ["spent", "Time Spent", "daily", "all"].contains(col.header as string));
+	// try {
+	// 	(columns[columnNum]as any).accessorKey = timeSpentKey;
+	// 	columns[columnNum].header = TableStateDisplay[tableState];
+	// } catch (e) {
+	// 	debugger;
+	// }
+	return columns;
+}
 
 class SessionRange {
 	task: number;
@@ -240,26 +252,59 @@ const getTodaysSessionRanges = async (): Promise<SessionRange[]> => {
 	return trimmedSessionRanges;
 }
 
+enum TableState {
+	daily,
+	all
+}
 
-export function TaskTrackingReactView({ view }: { view: View }): JSX.Element {
+const TableStateDisplay: {[key in TableState]: string } = {
+	[TableState.daily]: "daily",
+	[TableState.all]: "all"
+};
+
+const dailyFilter = { id: "lastActive", value: (new Date()).toLocaleDateString("en-US", { month: 'short', day: '2-digit' }) };
+const testFilter = { id: "id", value: "191" };
+
+export function TaskTableView({ view }: { view: View }): JSX.Element {
 	const [loading, setLoading] = useState(true);
-	const [columns] = useState(getColumns());
 	const [timeTracked, setTimeTracked] = useState("");
 	const [percentTimeTracked, setPercentTimeTracked] = useState("");
 	const [tasks, setTasks] = useState<ViewData[]>([]);
+	const [filteredTasks, setFilteredTasks] = useState<ViewData[]>([]);
+	const [filterValue, setFilterValue] = useState<string>('');
+	const [tableState, setTableState] = useState<TableState>(TableState.daily);
+	// const [table, setTable] = useState<Table<ViewData>>();
+	const [columns, setColumns] = useState<ColumnDef<ViewData>[]>(getColumns());
 	const [chartData, setChartData] = useState<{ name: string, value: number }[]>([]);
 	const [sorting, setSorting] = React.useState<SortingState>([{ id: "lastActive", desc: true }]);
+	// const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([dailyFilter]);
 	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([{ id: "lastActive", value: (new Date()).toLocaleDateString("en-US", { month: 'short', day: '2-digit' }) }]);
-
+	// const refreshTable = () => setTable(useReactTable({ data: tasks, columns, state: { sorting, columnFilters }, onSortingChange: setSorting, onColumnFiltersChange: setColumnFilters, getCoreRowModel: getCoreRowModel(), getSortedRowModel: getSortedRowModel(), getFilteredRowModel: getFilteredRowModel() }));
+	// refreshTable();
+	console.log(`2tableState: ${tableState}`);
+	console.log(`2\n${JSON.stringify(columns)}`);
 	const table = useReactTable({ data: tasks, columns, state: { sorting, columnFilters }, onSortingChange: setSorting, onColumnFiltersChange: setColumnFilters, getCoreRowModel: getCoreRowModel(), getSortedRowModel: getSortedRowModel(), getFilteredRowModel: getFilteredRowModel() });
-
 	useEffect(() => {
 		refresh()
 		setSorting([{ id: "lastActive", desc: true }]);
 		taskState.getChangeListener().subscribe(tasks => refresh());
-		const interval = view.registerInterval(window.setInterval(async () => updateMetrics(), 1000));
-		return () => clearInterval(interval)
+		// const interval = view.registerInterval(window.setInterval(async () => updateMetrics(), 1000));
+		// return () => clearInterval(interval)
 	}, []);
+
+	useEffect(() => {
+		console.log(`updateFilteredTasks: ${filterValue}`);
+		setFilteredTasks(tasks.filter(t => t.text?.contains(filterValue) || t.id.toString() == filterValue));
+	}, [filterValue, tasks]);
+
+	// useEffect(() => {
+	// 	console.log(`tableState: ${tableState}`);
+	// 	const columns = getColumns(tableState);
+	// 	console.log(`1\n${JSON.stringify(columns)}`);
+	// 	setColumns(columns);
+	// 	console.log(`in here\n${JSON.stringify(columns[columns.findIndex(col => ["spent", "Time Spent", "daily", "all"].contains(col.header as string))])}`)
+	// 	// setColumnFilters([testFilter]);
+	// }, [tableState]);
 
 
 	const refresh = () => {
@@ -292,27 +337,9 @@ export function TaskTrackingReactView({ view }: { view: View }): JSX.Element {
 		}
 	}
 
-	const data01 = [
-		{ "name": "Group A", "value": 400 },
-		{ "name": "Group B", "value": 300 },
-		{ "name": "Group C", "value": 300 },
-		{ "name": "Group D", "value": 200 },
-		{ "name": "Group E", "value": 278 },
-		{ "name": "Group F", "value": 189 }
-	];
-	const data02 = [
-		{ "name": "Group A", "value": 2400 },
-		{ "name": "Group B", "value": 4567 },
-		{ "name": "Group C", "value": 1398 },
-		{ "name": "Group D", "value": 9800 },
-		{ "name": "Group E", "value": 3908 },
-		{ "name": "Group F", "value": 4800 }
-	];
-	/*
-		  format of data value -> timespentToday
-	  filter all out that are 0
-	  show text as label 
-	*/
+	const data01 = [ { "name": "Group A", "value": 400 }, { "name": "Group B", "value": 300 }, { "name": "Group C", "value": 300 }, { "name": "Group D", "value": 200 }, { "name": "Group E", "value": 278 }, { "name": "Group F", "value": 189 }];
+	const data02 = [ { "name": "Group A", "value": 2400 }, { "name": "Group B", "value": 4567 }, { "name": "Group C", "value": 1398 }, { "name": "Group D", "value": 9800 }, { "name": "Group E", "value": 3908 }, { "name": "Group F", "value": 4800 }];
+
 
 	if (loading) {
 		return <h2>loading</h2>
@@ -326,6 +353,42 @@ export function TaskTrackingReactView({ view }: { view: View }): JSX.Element {
 						<Pie data={chartData} label={renderCustomizedLabel} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} fill="#8884d8" />
 					</PieChart>
 				</ResponsiveContainer> */}
+				<Autocomplete
+          inputProps={{ id: 'states-autocomplete' }}
+          wrapperStyle={{ position: 'relative', display: 'inline-block' }}
+          value={filterValue}
+          items={filteredTasks}
+          getItemValue={(item) => item.text}
+          onSelect={(value: string, item: ViewData) => {
+            // set the menu to only the selected item
+			setFilterValue(item.text ?? 'no string');
+            updateTaskFromClick(item.id).then(() => refresh());
+          }}
+          onChange={(event, value) => {
+			console.log(`onChange: ${value}`);
+            setFilterValue(value);
+			// updateFilteredTasks();
+          }}
+          renderMenu={children => (
+            <div className="menu">
+              {children}
+            </div>
+          )}
+          renderItem={(item, isHighlighted) => (
+            <div
+              className={`item ${isHighlighted ? 'item-highlighted' : ''}`}
+              key={item.id}
+            >{item.text}</div>
+          )}
+        />
+
+				{/* <Autocomplete
+					getItemValue={(item) => item.text}
+					items={tasks}
+					value={''}
+					renderItem={ (item, isHighlighted) => <div style={{ background: isHighlighted ? 'lightgray' : 'white' }} key={item.id}> {item.text} </div> }
+				/> */}
+				{/* <button onClick={() => setTableState((tableState + 1) % Object.keys(TableStateDisplay).length)}>{TableStateDisplay[tableState]}</button> */}
 				<table>
 					<thead>{table.getHeaderGroups().map(headerGroup => (
 						<tr key={headerGroup.id}>{headerGroup.headers.map(header => (

@@ -14,7 +14,7 @@ export class Task {
 	private _sessions: Session[] = [];
 	status?: Status;
 	// task source properties
-	sourceID?: number
+	sourceID: number
 	symbol: string;
 	path: string;
 	line: number;
@@ -30,6 +30,7 @@ export class Task {
 
 	constructor(stask: STask) {
 		Object.keys(stask).forEach(key => (this as any)[key] = stask[key]);
+		this.text = this.text.trim();
 		this.sourceID = getTaskTextID(this.text);
 		this.text = getTaskText(this.text);
 	}
@@ -116,10 +117,13 @@ export class Task {
 	}
 }
 
-export const getTaskTextID = (line: string): number | undefined => {
+export const getTaskTextID = (line: string): number => {
     const idMatch = line.match(/id:[0-9]+$/g);
     const id = ((idMatch ?? [""])[0].match(/[0-9]+/) ?? [])[0];
-    return !!id ? parseInt(id) : undefined;
+	// if (id == undefined) {
+	// 	throw new Error(`source id is null in task with text ${line}`);
+	// }
+    return parseInt(id);
 }
 
 export const getTaskText = (line: string): string => {

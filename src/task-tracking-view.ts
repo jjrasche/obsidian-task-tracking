@@ -4,7 +4,7 @@ import * as React from "react";
 import * as ReactDOM from "react-dom";
 import { createRoot, Root } from 'react-dom/client';
 
-import{ TaskTrackingReactView } from "./component/task-tracking-view";
+import{ TaskTableView } from "./component/task-tracking-view";
 import * as settings from 'state/settings.state';
 import * as app from 'state/app.state';
 
@@ -43,7 +43,7 @@ export class TaskTrackingView extends ItemView {
 	// war story: https://stackoverflow.com/a/41897800/2109446
 	async onOpen() {
 		this.root = createRoot(this.containerEl.children[1]!);
-		this.root.render(React.createElement(TaskTrackingReactView, {view: this}));
+		this.root.render(React.createElement(TaskTableView, {view: this}));
 		// listen to all tasks 
 	}
 

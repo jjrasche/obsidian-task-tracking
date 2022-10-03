@@ -35,6 +35,7 @@ export const save = async (tasks: Task[]) => {
     tasks.forEach(task => {
         if (!task.id) {
             log.errorToConsoleAndFile(`was about to save an undefined task:${task.toLog()}`, true);
+            throw new Error(`was about to save an undefined task:${task.toLog()}`);
             return;
         }
         taskData[task.id] = task.sessions
@@ -47,6 +48,7 @@ export const save = async (tasks: Task[]) => {
     const idsToDelete = currentIds.filter(id => !taskIds.has(id));
     if (idsToDelete.length !== 0) {
         log.errorToConsoleAndFile(`was about to delete ${idsToDelete}`, true);
+        throw new Error(`was about to delete ${idsToDelete}`);
     }
     // save
     const dataString = JSON.stringify(taskData);
