@@ -52,8 +52,8 @@ export const getMostRecent = async (): Promise<Task | undefined> => {
     });
     return mostRecentTask;
 }
-export const getViewData = async (filter ?: TaskFilter): Promise<ViewData[]> => {
-    return (await get(filter)).map(task => task.toView());
+export const getViewData = async (day = new Date(), filter ?: TaskFilter): Promise<ViewData[]> => {
+    return (await get(filter)).map(task => task.toView(day));
 }
 
 export const persist = async () => {

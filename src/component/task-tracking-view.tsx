@@ -26,6 +26,7 @@ import { Task } from "model/task.model";
 import * as dateService from 'service/date.service';
 import { Pie, PieChart, ResponsiveContainer } from "recharts";
 import Autocomplete from "react-autocomplete";
+import { errorToConsoleAndFile } from "service/logging.service";
 // import * as Autocomplete from "react-autocomplete";
 
 
@@ -266,6 +267,7 @@ const dailyFilter = { id: "lastActive", value: (new Date()).toLocaleDateString("
 const testFilter = { id: "id", value: "191" };
 
 export function TaskTableView({ view }: { view: View }): JSX.Element {
+	try {
 	const [loading, setLoading] = useState(true);
 	const [timeTracked, setTimeTracked] = useState("");
 	const [percentTimeTracked, setPercentTimeTracked] = useState("");
@@ -278,7 +280,10 @@ export function TaskTableView({ view }: { view: View }): JSX.Element {
 	const [chartData, setChartData] = useState<{ name: string, value: number }[]>([]);
 	const [sorting, setSorting] = React.useState<SortingState>([{ id: "lastActive", desc: true }]);
 	// const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([dailyFilter]);
-	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([{ id: "lastActive", value: (new Date()).toLocaleDateString("en-US", { month: 'short', day: '2-digit' }) }]);
+	const yesterday = new Date();
+	yesterday.setDate(yesterday.getDate()-1);
+	const date = yesterday;
+	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([{ id: "lastActive", value: date.toLocaleDateString("en-US", { month: 'short', day: '2-digit' }) }]);
 	// const refreshTable = () => setTable(useReactTable({ data: tasks, columns, state: { sorting, columnFilters }, onSortingChange: setSorting, onColumnFiltersChange: setColumnFilters, getCoreRowModel: getCoreRowModel(), getSortedRowModel: getSortedRowModel(), getFilteredRowModel: getFilteredRowModel() }));
 	// refreshTable();
 	console.log(`2tableState: ${tableState}`);
@@ -309,7 +314,7 @@ export function TaskTableView({ view }: { view: View }): JSX.Element {
 
 	const refresh = () => {
 		setLoading(true);
-		taskState.getViewData().then((ts) => {
+		taskState.getViewData(date).then((ts) => {
 			setLoading(false);
 			setTasks(ts);
 			const cd = ts.filter(task => !!task.timeSpentToday && task.timeSpentToday > 0)
@@ -423,6 +428,9 @@ export function TaskTableView({ view }: { view: View }): JSX.Element {
 				</table>
 			</Styles>
 		)
+	}
+	} catch(e) {
+		errorToConsoleAndFile(e, true)
 	}
 }
 

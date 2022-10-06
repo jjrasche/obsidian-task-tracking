@@ -57,18 +57,18 @@ export class Task {
 		return textWords?.join(" ");
 	}
 
-	toView(): ViewData {``
+	toView(day: Date): ViewData {
 		let timeSpent = 0, timeSpentToday = 0;
 		this._sessions.forEach((session, idx) => {
 			if (session.status === Status.Active) {
 				const next = this._sessions[idx+1] ?? {time: date.now()};
 				timeSpent += (next.time.getTime() - session.time.getTime()) / 1000;
-				if (date.isToday(session.time) || date.isToday(next.time)) {
-					const startOfDay = (new Date())
+				if (date.sameDay(session.time, day) || date.sameDay(next.time, day)) {
+					const startOfDay = new Date(day);
 					startOfDay.setHours(0,0,0,0);
 					timeSpentToday += (
-						(date.isToday(next.time) ?  next.time.getTime() : date.now().getTime()) -
-						(date.isToday(session.time) ?  session.time.getTime() : startOfDay.getTime())
+						(date.sameDay(next.time, day) ?  next.time.getTime() : date.now().getTime()) -
+						(date.sameDay(session.time, day) ?  session.time.getTime() : startOfDay.getTime())
 						) / 1000;
 				}
 			}
