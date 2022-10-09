@@ -25,10 +25,9 @@ import { Session } from "model/session";
 import { Task } from "model/task.model";
 import * as dateService from 'service/date.service';
 import { Pie, PieChart, ResponsiveContainer } from "recharts";
-import Autocomplete from "react-autocomplete";
 import { errorToConsoleAndFile } from "service/logging.service";
 // import * as Autocomplete from "react-autocomplete";
-
+import { AutoComplete, AutoCompleteItem } from "./autocomplete";
 
 const Styles = styled.div`
   padding: 1rem;
@@ -134,7 +133,7 @@ const SecondsToTime = (seconds: number): string => {
 	const minutes = Math.floor(seconds / 60) % 60;
 	const sec = seconds % 60;
 
-	return `${!!days ? days.toString() + ':' : ''}${!!hours ? hours.toString() + ':' : ''}${!!minutes ? minutes.toString() + ':' : ''}${sec}`;
+	return `${days != 0 ? days.toString() + ':' : ''}${(days != 0 || hours != 0) ? hours.toString() + ':' : ''}${(days != 0 || hours != 0 || minutes != 0) ? minutes.toString() + ':' : ''}${sec}`;
 }
 
 const navigate = (app: App, cell: any) => {
@@ -266,14 +265,13 @@ const TableStateDisplay: {[key in TableState]: string } = {
 const dailyFilter = { id: "lastActive", value: (new Date()).toLocaleDateString("en-US", { month: 'short', day: '2-digit' }) };
 const testFilter = { id: "id", value: "191" };
 
+
 export function TaskTableView({ view }: { view: View }): JSX.Element {
 	try {
 	const [loading, setLoading] = useState(true);
 	const [timeTracked, setTimeTracked] = useState("");
 	const [percentTimeTracked, setPercentTimeTracked] = useState("");
 	const [tasks, setTasks] = useState<ViewData[]>([]);
-	const [filteredTasks, setFilteredTasks] = useState<ViewData[]>([]);
-	const [filterValue, setFilterValue] = useState<string>('');
 	const [tableState, setTableState] = useState<TableState>(TableState.daily);
 	// const [table, setTable] = useState<Table<ViewData>>();
 	const [columns, setColumns] = useState<ColumnDef<ViewData>[]>(getColumns());
@@ -281,7 +279,7 @@ export function TaskTableView({ view }: { view: View }): JSX.Element {
 	const [sorting, setSorting] = React.useState<SortingState>([{ id: "lastActive", desc: true }]);
 	// const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([dailyFilter]);
 	const yesterday = new Date();
-	yesterday.setDate(yesterday.getDate()-1);
+	// yesterday.setDate(yesterday.getDate()-1);
 	const date = yesterday;
 	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([{ id: "lastActive", value: date.toLocaleDateString("en-US", { month: 'short', day: '2-digit' }) }]);
 	// const refreshTable = () => setTable(useReactTable({ data: tasks, columns, state: { sorting, columnFilters }, onSortingChange: setSorting, onColumnFiltersChange: setColumnFilters, getCoreRowModel: getCoreRowModel(), getSortedRowModel: getSortedRowModel(), getFilteredRowModel: getFilteredRowModel() }));
@@ -297,10 +295,6 @@ export function TaskTableView({ view }: { view: View }): JSX.Element {
 		// return () => clearInterval(interval)
 	}, []);
 
-	useEffect(() => {
-		console.log(`updateFilteredTasks: ${filterValue}`);
-		setFilteredTasks(tasks.filter(t => t.text?.contains(filterValue) || t.id.toString() == filterValue));
-	}, [filterValue, tasks]);
 
 	// useEffect(() => {
 	// 	console.log(`tableState: ${tableState}`);
@@ -317,10 +311,6 @@ export function TaskTableView({ view }: { view: View }): JSX.Element {
 		taskState.getViewData(date).then((ts) => {
 			setLoading(false);
 			setTasks(ts);
-			const cd = ts.filter(task => !!task.timeSpentToday && task.timeSpentToday > 0)
-				.map(task => ({ name: task.text ?? 'N/A', value: task.timeSpentToday ?? 0 }));
-			setChartData(cd);
-			console.log(`task is active\tid:${ts.find(t => t.status === Status.Active)?.id}\ttags:${ts.find(t => t.status === Status.Active)?.tags}`);
 		});
 	}
 
@@ -338,8 +328,11 @@ export function TaskTableView({ view }: { view: View }): JSX.Element {
 
 	const rowClickHandler = async (row: ViewData, column: ColumnDef<ViewData, unknown>) => {
 		if (column.id !== "fileName") {
-			await updateTaskFromClick(row.id).then(() => refresh());
+			handleTaskChange(row.id)
 		}
+	}
+	const handleTaskChange = async (id: any) => {
+		await updateTaskFromClick(id).then(() => refresh()); 
 	}
 
 	const data01 = [ { "name": "Group A", "value": 400 }, { "name": "Group B", "value": 300 }, { "name": "Group C", "value": 300 }, { "name": "Group D", "value": 200 }, { "name": "Group E", "value": 278 }, { "name": "Group F", "value": 189 }];
@@ -358,41 +351,7 @@ export function TaskTableView({ view }: { view: View }): JSX.Element {
 						<Pie data={chartData} label={renderCustomizedLabel} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} fill="#8884d8" />
 					</PieChart>
 				</ResponsiveContainer> */}
-				<Autocomplete
-          inputProps={{ id: 'states-autocomplete' }}
-          wrapperStyle={{ position: 'relative', display: 'inline-block' }}
-          value={filterValue}
-          items={filteredTasks}
-          getItemValue={(item) => item.text}
-          onSelect={(value: string, item: ViewData) => {
-            // set the menu to only the selected item
-			setFilterValue(item.text ?? 'no string');
-            updateTaskFromClick(item.id).then(() => refresh());
-          }}
-          onChange={(event, value) => {
-			console.log(`onChange: ${value}`);
-            setFilterValue(value);
-			// updateFilteredTasks();
-          }}
-          renderMenu={children => (
-            <div className="menu">
-              {children}
-            </div>
-          )}
-          renderItem={(item, isHighlighted) => (
-            <div
-              className={`item ${isHighlighted ? 'item-highlighted' : ''}`}
-              key={item.id}
-            >{item.text}</div>
-          )}
-        />
-
-				{/* <Autocomplete
-					getItemValue={(item) => item.text}
-					items={tasks}
-					value={''}
-					renderItem={ (item, isHighlighted) => <div style={{ background: isHighlighted ? 'lightgray' : 'white' }} key={item.id}> {item.text} </div> }
-				/> */}
+				<AutoComplete items={tasks.map(t => ({ display: t.text, key: t.id } as AutoCompleteItem))} onSelectCallback={handleTaskChange}/>
 				{/* <button onClick={() => setTableState((tableState + 1) % Object.keys(TableStateDisplay).length)}>{TableStateDisplay[tableState]}</button> */}
 				<table>
 					<thead>{table.getHeaderGroups().map(headerGroup => (
