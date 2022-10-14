@@ -11,8 +11,11 @@ export function AutoComplete({items, onSelectCallback}: {items: AutoCompleteItem
 	const [filterValue, setFilterValue] = useState<string>('');
 
 	useEffect(() => {
-		setFilteredItems(items.filter(t => t.display?.contains(filterValue) || t.key.toString() == filterValue));
+		const updatedFilteredItems = items.filter(item => getValue(item).contains(filterValue));
+		setFilteredItems(updatedFilteredItems);
 	}, [filterValue, items]);
+
+	const getValue = (item: AutoCompleteItem): string => `${item.display} id:${item.key}`;
 
 	return <div>
 		<input list="items" 
@@ -24,14 +27,14 @@ export function AutoComplete({items, onSelectCallback}: {items: AutoCompleteItem
 					I don't see a valid way to use onsubmit/onselect with react, so need to make some assumptions
 					about when an item is selected
 				*/
-				if (/\sid:[0-9]+$/.test(value) && filteredItems.length === 1) {
+				if (/\sid:[0-9]+$/.test(value)) {
 					const id = parseInt(value.match(/[0-9]+$/)[0]);
 					onSelectCallback(id);
 				}
 			}}		
 			/>
 		<datalist id="items">
-			{items.map(item => <option value={`${item.display} id:${item.key}`} key={item.key}></option>)}
+			{items.map(item => <option value={getValue(item)} key={item.key}></option>)}
 		</datalist>
 	</div>
 }

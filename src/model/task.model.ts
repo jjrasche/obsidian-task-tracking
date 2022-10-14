@@ -11,7 +11,7 @@ import { Observable } from "rxjs";
 export class Task {
 	// task data properties
 	id: number;
-	private _sessions: Session[] = [];
+	_sessions: Session[] = [];
 	status?: Status;
 	// task source properties
 	sourceID: number
@@ -58,11 +58,14 @@ export class Task {
 	}
 
 	toView(day: Date): ViewData {
-		let timeSpent = 0, timeSpentToday = 0;
+		let timeSpent = 0, timeSpentToday = 0, timeSpentThisSprint = 0;
 		this._sessions.forEach((session, idx) => {
 			if (session.status === Status.Active) {
 				const next = this._sessions[idx+1] ?? {time: date.now()};
 				timeSpent += (next.time.getTime() - session.time.getTime()) / 1000;
+				// if (this.text.contains("cleanup")) {
+				// 	debugger;
+				// }
 				if (date.sameDay(session.time, day) || date.sameDay(next.time, day)) {
 					const startOfDay = new Date(day);
 					startOfDay.setHours(0,0,0,0);
@@ -71,6 +74,15 @@ export class Task {
 						(date.sameDay(session.time, day) ?  session.time.getTime() : startOfDay.getTime())
 						) / 1000;
 				}
+				if (date.inSprint(session.time) || date.inSprint(next.time)) {
+					const startOfDay = new Date(day);
+					startOfDay.setHours(0,0,0,0);
+					timeSpentThisSprint += (
+						(date.inSprint(next.time) ?  next.time.getTime() : date.now().getTime()) -
+						(date.inSprint(session.time) ?  session.time.getTime() : startOfDay.getTime())
+						) / 1000;
+				}
+
 			}
 		}, 0);
 		const first = this._sessions[0];
@@ -83,11 +95,13 @@ export class Task {
 			lastActive: this.lastActive,
 			timeSpent,
 			timeSpentToday,
+			timeSpentThisSprint,
 			timeToClose: (!!last && last.status === Status.Complete) ? ((last.time.getTime() - first.time.getTime()) / 1000) : undefined,
 			numSwitches: this._sessions.filter(session => session.status === Status.Active).length,
 			fileName: this.path,
 			tags: this.tags,
-			line: this.line
+			line: this.line,
+			sessions: this._sessions
 		}
 	}
 

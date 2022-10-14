@@ -1,6 +1,6 @@
 import { App, MarkdownView, Platform, Setting, TFile, View, EventRef } from "obsidian";
 import * as React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import styled from 'styled-components'
 import {
 	ColumnDef,
@@ -14,6 +14,7 @@ import {
 	FilterFn,
 	Row,
 	Table,
+	aggregationFns,
 } from '@tanstack/react-table'
 import { Status, StatusIndicator, StatusWord } from "model/status";
 import { ViewData } from "model/view-data.model";
@@ -69,7 +70,7 @@ export const DateFormatter = (cell: any): JSX.Element => {
 	if (date === dateService.min) {
 		return "-" as any;
 	}
-	return date.toLocaleDateString("en-US", { month: 'short', day: '2-digit', hour: 'numeric', minute: 'numeric', hour12: false });
+	return date.toLocaleDateString("en-US", { month: 'short', day: '2-digit', year: '2-digit', hour: 'numeric', minute: 'numeric', hour12: false });
 }
 
 export const DateSimpleTimeFormatter = (cell: any): JSX.Element => {
@@ -158,41 +159,52 @@ const filterFn: FilterFn<any> = (row: Row<ViewData>, columnId, value) => {
 		val = (columnDef as any).cell(cell);
 	}
 	// always include certain tags
-	try {
-		const tags = row.getValue("tags") as string[];
-		let calculatedTags = tags.map(tag => tag.replace('#', '').split("/")[0]); // base tags
-		calculatedTags = calculatedTags.concat(tags.map(tag => tag.replace('#', ''))); // full tags
-		const includeTags = settings.get().alwaysIncludeTagsInView;
-		if (calculatedTags.some(tag => includeTags.includes(tag))) {
-			return true;
-		}
-	} catch (e) {
+	// try {
+	// 	const tags = row.getValue("tags") as string[];
+	// 	let calculatedTags = tags.map(tag => tag.replace('#', '').split("/")[0]); // base tags
+	// 	calculatedTags = calculatedTags.concat(tags.map(tag => tag.replace('#', ''))); // full tags
+	// 	const includeTags = settings.get().alwaysIncludeTagsInView;
+	// 	if (calculatedTags.some(tag => includeTags.includes(tag))) {
+	// 		return true;
+	// 	}
+	// } catch (e) {
+	// }
+	if (columnDef?.cell === DateFormatter) {
+		var dateFilterValue, dateCellVal;
+		try {
+			dateFilterValue = new Date(value);
+			dateCellVal = new Date(val);
+		} catch (e) {}
+		return  !!dateFilterValue && !!dateCellVal && dateFilterValue <  dateCellVal;
 	}
 	return val.toString().toLowerCase().contains(value.toLowerCase());
 }
 
-const desktopColumns: ColumnDef<ViewData>[] = [
-	{ header: 'Status', accessorKey: 'status', cell: (cell: any) => StatusWord[cell.getValue() as Status], filterFn },
-	{ header: 'Text', accessorKey: 'text' },
-	{ header: 'Recent', accessorKey: 'lastActive', cell: DateFormatter, filterFn },
-	{ header: 'Tags', accessorKey: 'tags', cell: ArrayFormatter, filterFn },
-	{ header: 'Time Spent', accessorKey: 'timeSpentToday', cell: TimeFormatter, filterFn },
-	{ header: 'Time To Close', accessorKey: 'timeToClose', cell: TimeFormatter, filterFn },
-	{ header: '# Switches', accessorKey: 'numSwitches', filterFn },
-	{ header: 'File', accessorKey: 'fileName', cell: (cell: any) => <a onClick={() => navigate(app, cell)}>{cell.getValue()}</a>, filterFn },
-	{ header: 'ID', accessorKey: 'id' },
+type Agg = {agg: (table: any) =>  any}
+const desktopColumns: ColumnDef<ViewData & Agg>[] = [
+	{ id: 'status', header: 'Status', accessorKey: 'status', cell: (cell: any) => StatusWord[cell.getValue() as Status], filterFn },
+	{ id: 'text', header: 'Text', accessorKey: 'text' },
+	{ id: 'lastActive', header: 'Recent', accessorKey: 'lastActive', cell: DateFormatter, filterFn },
+	{ id: 'tags', header: 'Tags', accessorKey: 'tags', cell: ArrayFormatter, filterFn },
+	{ id: 'timeSpentToday', header: 'Time Spent Today', accessorKey: 'timeSpentToday', cell: TimeFormatter, filterFn },
+	{ id: 'timeSpent', header: 'Time Spent', accessorKey: 'timeSpent', cell: TimeFormatter, filterFn },
+	{ id: 'timeSpentThisSprint', header: 'Time Spent in Sprint', accessorKey: 'timeSpentThisSprint', cell: TimeFormatter, filterFn },
+	{ id: 'timeToClose', header: 'Time To Close', accessorKey: 'timeToClose', cell: TimeFormatter, filterFn },
+	{ id: 'numSwitches', header: '# Switches', accessorKey: 'numSwitches', filterFn },
+	{ id: 'fileName', header: 'File', accessorKey: 'fileName', cell: (cell: any) => <a onClick={() => navigate(app, cell)}>{cell.getValue()}</a>, filterFn },
+	{ id: 'id', header: 'ID', accessorKey: 'id' },
 ];
 
-const mobileColumns: ColumnDef<ViewData>[] = [
-	{ header: '', accessorKey: 'status', cell: (cell: any) => StatusIndicator[cell.getValue() as Status], filterFn },
-	{ header: 'tags', accessorKey: 'tags', cell: ArrayFormatter, filterFn },
-	// { header: 'text', accessorKey: 'text', cell: StringFormatter(20) },
-	{ header: 'recent', accessorKey: 'lastActive', cell: DateFormatter, filterFn },
-	{ header: 'spent', accessorKey: 'timeSpentToday', cell: TimeFormatter, filterFn },
-	{ header: 'file', accessorKey: 'fileName', cell: (cell: any) => <a onClick={() => navigate(app, cell)}>{cell.getValue()}</a>, filterFn },
+const mobileColumns: ColumnDef<ViewData & Agg>[] = [
+	{ id: 'status', header: '', accessorKey: 'status', cell: (cell: any) => StatusIndicator[cell.getValue() as Status], filterFn },
+	{ id: 'tags', header: 'tags', accessorKey: 'tags', cell: ArrayFormatter, filterFn },
+	// { id: 'text', { header: 'text', accessorKey: 'text', cell: StringFormatter(20) },
+	{ id: 'lastActive', header: 'recent', accessorKey: 'lastActive', cell: DateFormatter, filterFn },
+	{ id: 'timeSpentToday', header: 'spent', accessorKey: 'timeSpentToday', cell: TimeFormatter, filterFn },
+	{ id: 'fileName', header: 'file', accessorKey: 'fileName', cell: (cell: any) => <a onClick={() => navigate(app, cell)}>{cell.getValue()}</a>, filterFn },
 ];
 
-const getColumns = (tableState: TableState = TableState.daily): ColumnDef<ViewData>[] => {
+const getColumns = (tableState: TableState = TableState.daily): ColumnDef<ViewData & Agg>[] => {
 	const timeSpentKey = tableState === TableState.daily ? 'timeSpentToday' : 'timeSpent';
 	let columns = Platform.isMobile ? mobileColumns : desktopColumns;
 	// const columnNum = columns.findIndex(col => ["spent", "Time Spent", "daily", "all"].contains(col.header as string));
@@ -209,7 +221,7 @@ class SessionRange {
 	task: number;
 	tags: string[];
 	start: Date;
-	end: Date;
+	end: Date;	
 
 	constructor(task: Task, active: Session, next?: Session) {
 		this.task = task.id;
@@ -274,19 +286,28 @@ export function TaskTableView({ view }: { view: View }): JSX.Element {
 	const [tasks, setTasks] = useState<ViewData[]>([]);
 	const [tableState, setTableState] = useState<TableState>(TableState.daily);
 	// const [table, setTable] = useState<Table<ViewData>>();
-	const [columns, setColumns] = useState<ColumnDef<ViewData>[]>(getColumns());
+	const [columns, setColumns] = useState<ColumnDef<ViewData & Agg>[]>(getColumns());
 	const [chartData, setChartData] = useState<{ name: string, value: number }[]>([]);
 	const [sorting, setSorting] = React.useState<SortingState>([{ id: "lastActive", desc: true }]);
 	// const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([dailyFilter]);
 	const yesterday = new Date();
-	// yesterday.setDate(yesterday.getDate()-1);
+	// yesterday.setDate(yesterday.getDate() - 1);
 	const date = yesterday;
-	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([{ id: "lastActive", value: date.toLocaleDateString("en-US", { month: 'short', day: '2-digit' }) }]);
+	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([{ id: "lastActive", value: date.toLocaleDateString("en-US", { month: 'short', day: '2-digit', year: '2-digit' }) }]);
+	// const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
 	// const refreshTable = () => setTable(useReactTable({ data: tasks, columns, state: { sorting, columnFilters }, onSortingChange: setSorting, onColumnFiltersChange: setColumnFilters, getCoreRowModel: getCoreRowModel(), getSortedRowModel: getSortedRowModel(), getFilteredRowModel: getFilteredRowModel() }));
 	// refreshTable();
-	console.log(`2tableState: ${tableState}`);
-	console.log(`2\n${JSON.stringify(columns)}`);
-	const table = useReactTable({ data: tasks, columns, state: { sorting, columnFilters }, onSortingChange: setSorting, onColumnFiltersChange: setColumnFilters, getCoreRowModel: getCoreRowModel(), getSortedRowModel: getSortedRowModel(), getFilteredRowModel: getFilteredRowModel() });
+	const table = useReactTable({ data: tasks, columns: (columns as ColumnDef<ViewData, unknown>[]), state: { sorting, columnFilters }, onSortingChange: setSorting, onColumnFiltersChange: setColumnFilters, getCoreRowModel: getCoreRowModel(), getSortedRowModel: getSortedRowModel(), getFilteredRowModel: getFilteredRowModel() });
+
+	const totals = useMemo(() => {
+		return columns.map(col => {
+			if (!!col.id && (col.id).contains("timeSpent")) {
+				return SecondsToTime(tasks.reduce((total, task) => total + ((task as any)[col.id as string] as number), 0));
+			}
+			return "-";
+		})
+	}, [columns, tasks]);
+
 	useEffect(() => {
 		refresh()
 		setSorting([{ id: "lastActive", desc: true }]);
@@ -363,11 +384,11 @@ export function TaskTableView({ view }: { view: View }): JSX.Element {
 											{flexRender(header.column.columnDef.header, header.getContext())}
 											{{ asc: ' 🔼', desc: ' 🔽' }[header.column.getIsSorted() as string] ?? null}
 										</div>
-										{/* {header.column.getCanFilter() ? (
+										{header.column.getCanFilter() ? (
 										<div>
 											<input onChange={ e => header.column.setFilterValue(e.target.value) }/>
 										</div>
-									) : null} */}
+									) : null}
 									</>
 								)}
 
@@ -377,12 +398,16 @@ export function TaskTableView({ view }: { view: View }): JSX.Element {
 						</tr>
 					))}
 					</thead>
-					<tbody>{table.getRowModel().rows.map(row => (
-						<tr key={row.id}>{row.getVisibleCells().map(cell => (
-							<td key={cell.id} onClick={async () => await rowClickHandler(row.original, cell.column)}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+					<tbody>
+						{table.getRowModel().rows.map(row => (
+							<tr key={row.id}>{row.getVisibleCells().map(cell => (
+								<td key={cell.id} onClick={async () => await rowClickHandler(row.original, cell.column)}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+							))}
+							</tr>
 						))}
-						</tr>
-					))}
+						<tr> {totals.map((total, idx) => (
+							<td key={columns[idx].id + ' total'} > {total}</td>
+						))}</tr>
 					</tbody>
 				</table>
 			</Styles>

@@ -8,4 +8,10 @@ export const sameDay = function(date: Date, day: Date): boolean {
     date.getMonth() == day.getMonth() &&
     date.getFullYear() == day.getFullYear()
 }
+export const inSprint = function(date: Date): boolean {
+  const firstSprintDate = new Date("10-11-2022 11:30");
+  // const sprintStart = new Date();
+  // sprintStart.setDate(sprintStart.getDate() - 14)
+  return date.getDate() > firstSprintDate.getDate();
+}
 export const isToday = (date: Date): boolean => sameDay(date, new Date()); 
