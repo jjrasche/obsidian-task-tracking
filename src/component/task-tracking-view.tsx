@@ -293,8 +293,8 @@ export function TaskTableView({ view }: { view: View }): JSX.Element {
 	const yesterday = new Date();
 	// yesterday.setDate(yesterday.getDate() - 1);
 	const date = yesterday;
-	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([{ id: "lastActive", value: date.toLocaleDateString("en-US", { month: 'short', day: '2-digit', year: '2-digit' }) }]);
-	// const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+	// const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([{ id: "lastActive", value: date.toLocaleDateString("en-US", { month: 'short', day: '2-digit', year: '2-digit' }) }]);
+	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
 	// const refreshTable = () => setTable(useReactTable({ data: tasks, columns, state: { sorting, columnFilters }, onSortingChange: setSorting, onColumnFiltersChange: setColumnFilters, getCoreRowModel: getCoreRowModel(), getSortedRowModel: getSortedRowModel(), getFilteredRowModel: getFilteredRowModel() }));
 	// refreshTable();
 	const table = useReactTable({ data: tasks, columns: (columns as ColumnDef<ViewData, unknown>[]), state: { sorting, columnFilters }, onSortingChange: setSorting, onColumnFiltersChange: setColumnFilters, getCoreRowModel: getCoreRowModel(), getSortedRowModel: getSortedRowModel(), getFilteredRowModel: getFilteredRowModel() });
@@ -302,11 +302,13 @@ export function TaskTableView({ view }: { view: View }): JSX.Element {
 	const totals = useMemo(() => {
 		return columns.map(col => {
 			if (!!col.id && (col.id).contains("timeSpent")) {
-				return SecondsToTime(tasks.reduce((total, task) => total + ((task as any)[col.id as string] as number), 0));
+				const t = table.getFilteredRowModel().rows.map(r => r.original);
+				return SecondsToTime(table.getFilteredRowModel().rows.map(r => r.original)
+					.reduce((total, task) => total + ((task as any)[col.id as string] as number), 0));
 			}
 			return "-";
 		})
-	}, [columns, tasks]);
+	}, [columns, columnFilters, tasks]);
 
 	useEffect(() => {
 		refresh()
