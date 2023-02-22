@@ -71,21 +71,21 @@ export function taskModelTests(t: TestTaskTrackingPlugin) {
 		task.setSessions([originalSession]);
         // can't set to same status
         await task.setStatus(Status.Inactive)
-		expect(task.sessions).to.eql([originalSession]);
+		expect(task.events).to.eql([originalSession]);
 		// happy path
         await task.setStatus(Status.Active)
 		const session2 = {time: new Date(), status: Status.Active};
-		expect(task.sessions).to.eql([originalSession, session2]);
+		expect(task.events).to.eql([originalSession, session2]);
         // can't set to same status
         await task.setStatus(Status.Active)
-		expect(task.sessions).to.eql([originalSession, session2]);
+		expect(task.events).to.eql([originalSession, session2]);
         // set to complete
         await task.setStatus(Status.Complete)
 		const session3 = {time: new Date(), status: Status.Complete};
-		expect(task.sessions).to.eql([originalSession, session2, session3]);
+		expect(task.events).to.eql([originalSession, session2, session3]);
         // can't set to same status
         await task.setStatus(Status.Complete)
-		expect(task.sessions).to.eql([originalSession, session2, session3]);
+		expect(task.events).to.eql([originalSession, session2, session3]);
     })
 
     t.test("toView", async () => {

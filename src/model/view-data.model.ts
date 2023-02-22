@@ -1,4 +1,4 @@
-import { Session } from "./session";
+import { Event } from "./event";
 import { Status } from "./status";
 
 export class ViewData {
@@ -15,5 +15,5 @@ export class ViewData {
 	fileName?: string;
 	tags: string[];
 	line: number;
-	sessions: Session[];
+	events: Event[];
 };

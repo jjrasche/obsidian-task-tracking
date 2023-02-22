@@ -88,3 +88,7 @@ could create a view
 
 ## Questions
 ? does it make sense to keep a manageTask.sessions separate from taskData? as when modifying we will need the entire object anyway? A:
+? should data be stored as true sesssion instead of list of events? A:
+  - read: 
+
+- how is session data used

@@ -19,7 +19,7 @@ export function tasksStateTests(t: TestTaskTrackingPlugin) {
         const expectedSessions = [{time: new Date(), status: Status.Active}];
         const actual = await tasks.find(1);
         expect(actual.id).to.eq(1);  
-        t.expectSessionsEqual(expectedSessions, actual.sessions);
+        t.expectSessionsEqual(expectedSessions, actual.events);
     })
 }
 

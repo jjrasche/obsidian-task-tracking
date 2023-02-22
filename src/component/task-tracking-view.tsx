@@ -22,13 +22,15 @@ import { updateTaskFromClick } from "service/modify-task.service";
 import * as taskState from 'state/tasks.state';
 import * as appState from 'state/app.state';
 import * as settings from 'state/settings.state';
-import { Session } from "model/session";
 import { Task } from "model/task.model";
 import * as dateService from 'service/date.service';
 import { Pie, PieChart, ResponsiveContainer } from "recharts";
 import { errorToConsoleAndFile } from "service/logging.service";
 // import * as Autocomplete from "react-autocomplete";
 import { AutoComplete, AutoCompleteItem } from "./autocomplete";
+import { EventComponent } from "./event";
+import { EventListComponent } from "./event-list";
+import { Event } from "model/event";
 
 const Styles = styled.div`
   padding: 1rem;
@@ -127,7 +129,7 @@ export const TimeFormatter = (cell: any): JSX.Element => {
 	return SecondsToTime(seconds) as any;
 }
 
-const SecondsToTime = (seconds: number): string => {
+export const SecondsToTime = (seconds: number): string => {
 	seconds = Math.trunc(seconds);
 	const days = Math.floor(seconds / 86400);
 	const hours = Math.floor(seconds / 3600) % 24;
@@ -143,7 +145,6 @@ const navigate = (app: App, cell: any) => {
 		const app = appState.get();
 		app.workspace.openLinkText("", row.fileName ?? "").then(() => {
 			const view = app.workspace.getActiveViewOfType(MarkdownView);
-			const editor = view?.editor;
 			if (!!editor) {
 				editor.scrollIntoView({ from: { line: row.line ?? 0, ch: 0 }, to: { line: row.line ?? 0, ch: 0 } }, true);
 			}
@@ -152,12 +153,13 @@ const navigate = (app: App, cell: any) => {
 }
 
 const filterFn: FilterFn<any> = (row: Row<ViewData>, columnId, value) => {
-	let val: any = row.getValue(columnId);
+	let val: any = (row.original as any)[columnId];
+	// let val: any = row.getValue(columnId);
 	const columnDef = getColumns().find((col: any) => col.accessorKey === columnId);
-	const cell = row.getAllCells().find(cell => cell.column.id === columnId)
-	if (!!columnDef && !!columnDef.cell) {
-		val = (columnDef as any).cell(cell);
-	}
+	// const cell = row.getAllCells().find(cell => cell.column.id === columnId)
+	// if (!!columnDef && !!columnDef.cell) {
+	// 	val = (columnDef as any).cell(cell);
+	// }
 	// always include certain tags
 	// try {
 	// 	const tags = row.getValue("tags") as string[];
@@ -175,7 +177,7 @@ const filterFn: FilterFn<any> = (row: Row<ViewData>, columnId, value) => {
 			dateFilterValue = new Date(value);
 			dateCellVal = new Date(val);
 		} catch (e) {}
-		return  !!dateFilterValue && !!dateCellVal && dateFilterValue <  dateCellVal;
+		return  !!dateFilterValue && !!dateCellVal && dateFilterValue <= dateCellVal;
 	}
 	return val.toString().toLowerCase().contains(value.toLowerCase());
 }
@@ -250,10 +252,10 @@ const getTodaysSessionRanges = async (): Promise<SessionRange[]> => {
 	const todayDate = now.toDateString();
 	const sessionRanges: SessionRange[] = []
 	tasks.forEach(task => {
-		if (!!task.sessions) {
-			task.sessions.forEach((active, idx) => {
+		if (!!task.events) {
+			task.events.forEach((active, idx) => {
 				if (active.status === Status.Active) {
-					sessionRanges.push(new SessionRange(task, active, task.sessions[idx + 1]));
+					sessionRanges.push(new SessionRange(task, active, task.events[idx + 1]));
 				}
 			});
 		}
@@ -293,8 +295,8 @@ export function TaskTableView({ view }: { view: View }): JSX.Element {
 	const yesterday = new Date();
 	// yesterday.setDate(yesterday.getDate() - 1);
 	const date = yesterday;
-	// const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([{ id: "lastActive", value: date.toLocaleDateString("en-US", { month: 'short', day: '2-digit', year: '2-digit' }) }]);
-	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([{ id: "lastActive", value: date.toLocaleDateString("en-US", { month: 'short', day: '2-digit', year: '2-digit' }) }]);
+	// const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
 	// const refreshTable = () => setTable(useReactTable({ data: tasks, columns, state: { sorting, columnFilters }, onSortingChange: setSorting, onColumnFiltersChange: setColumnFilters, getCoreRowModel: getCoreRowModel(), getSortedRowModel: getSortedRowModel(), getFilteredRowModel: getFilteredRowModel() }));
 	// refreshTable();
 	const table = useReactTable({ data: tasks, columns: (columns as ColumnDef<ViewData, unknown>[]), state: { sorting, columnFilters }, onSortingChange: setSorting, onColumnFiltersChange: setColumnFilters, getCoreRowModel: getCoreRowModel(), getSortedRowModel: getSortedRowModel(), getFilteredRowModel: getFilteredRowModel() });
@@ -311,7 +313,7 @@ export function TaskTableView({ view }: { view: View }): JSX.Element {
 	}, [columns, columnFilters, tasks]);
 
 	useEffect(() => {
-		refresh()
+		refresh();
 		setSorting([{ id: "lastActive", desc: true }]);
 		taskState.getChangeListener().subscribe(tasks => refresh());
 		// const interval = view.registerInterval(window.setInterval(async () => updateMetrics(), 1000));
@@ -360,13 +362,19 @@ export function TaskTableView({ view }: { view: View }): JSX.Element {
 
 	const data01 = [ { "name": "Group A", "value": 400 }, { "name": "Group B", "value": 300 }, { "name": "Group C", "value": 300 }, { "name": "Group D", "value": 200 }, { "name": "Group E", "value": 278 }, { "name": "Group F", "value": 189 }];
 	const data02 = [ { "name": "Group A", "value": 2400 }, { "name": "Group B", "value": 4567 }, { "name": "Group C", "value": 1398 }, { "name": "Group D", "value": 9800 }, { "name": "Group E", "value": 3908 }, { "name": "Group F", "value": 4800 }];
-
+	const testEventData = [
+		{status: Status.Complete, time: new Date("01/25/2022")},
+		{status: Status.Inactive, time: new Date("01/24/2022")},
+		{status: Status.Active, time: new Date("01/23/2022")}
+	];
 
 	if (loading) {
 		return <h2>loading</h2>
 	} else {
 		return (
 			<Styles>
+				{/* <EventComponent event={ {status: Status.Active, time: new Date()} }></EventComponent> */}
+				{/* <EventListComponent events={testEventData}></EventListComponent> */}
 				{/* <div>{timeTracked}</div>
 				<div>{percentTimeTracked}</div>
 				<ResponsiveContainer width={'99%'} height={300}>
@@ -374,7 +382,10 @@ export function TaskTableView({ view }: { view: View }): JSX.Element {
 						<Pie data={chartData} label={renderCustomizedLabel} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} fill="#8884d8" />
 					</PieChart>
 				</ResponsiveContainer> */}
-				<AutoComplete items={tasks.map(t => ({ display: t.text, key: t.id } as AutoCompleteItem))} onSelectCallback={handleTaskChange}/>
+				<AutoComplete items={tasks
+					.map(t => ({ display: t.text, key: t.id, lastUpdated: t.lastActive } as AutoCompleteItem))
+					.sort((a,b) => b.lastUpdated.getTime() -  a.lastUpdated.getTime())
+				} onSelectCallback={handleTaskChange}/>
 				{/* <button onClick={() => setTableState((tableState + 1) % Object.keys(TableStateDisplay).length)}>{TableStateDisplay[tableState]}</button> */}
 				<table>
 					<thead>{table.getHeaderGroups().map(headerGroup => (

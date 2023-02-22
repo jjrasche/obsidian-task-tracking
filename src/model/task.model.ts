@@ -1,17 +1,18 @@
 import { Pos } from "obsidian";
 import { STask } from "obsidian-dataview";
-import { Session } from "./session";
+import { Event } from "./event";
 import { Status, StatusIndicator, StatusWord } from "./status";
 import { ViewData } from "./view-data.model";
 import * as date from 'service/date.service';
 import * as log from 'service/logging.service';
 import { Observable } from "rxjs";
+import { number } from "prop-types";
 
 
 export class Task {
 	// task data properties
 	id: number;
-	_sessions: Session[] = [];
+	events: Event[] = [];
 	status?: Status;
 	// task source properties
 	sourceID: number
@@ -27,6 +28,10 @@ export class Task {
 	dirty = false;
 	error = false;
 	saved = true;
+	timeSpent = 0;
+	timeSpentToday = 0;
+	timeSpentThisSprint = 0;
+
 
 	constructor(stask: STask) {
 		Object.keys(stask).forEach(key => (this as any)[key] = stask[key]);
@@ -45,7 +50,7 @@ export class Task {
 	}
 
 	public toLog(): string {
-		return `sourceId:${this.sourceID}, dataID:${this.id}, text:${this.text}, sessions:${this.sessions.length}, file:${this.path}, line:${this.line}, dirty:${this.dirty}, saved:${this.saved}`;
+		return `sourceId:${this.sourceID}, dataID:${this.id}, text:${this.text}, events:${this.events.length}, file:${this.path}, line:${this.line}, dirty:${this.dirty}, saved:${this.saved}`;
 	}
 
 	get viewText(): string {
@@ -57,36 +62,38 @@ export class Task {
 		return textWords?.join(" ");
 	}
 
-	toView(day: Date): ViewData {
-		let timeSpent = 0, timeSpentToday = 0, timeSpentThisSprint = 0;
-		this._sessions.forEach((session, idx) => {
-			if (session.status === Status.Active) {
-				const next = this._sessions[idx+1] ?? {time: date.now()};
-				timeSpent += (next.time.getTime() - session.time.getTime()) / 1000;
-				// if (this.text.contains("cleanup")) {
-				// 	debugger;
-				// }
-				if (date.sameDay(session.time, day) || date.sameDay(next.time, day)) {
+	getTimes(day: Date = new Date()): ({ timeSpent: number, timeSpentToday: number, timeSpentThisSprint: number}) {
+		let timeSpent = 0, timeSpentToday = 0, timeSpentThisSprint = 0; 
+		this.events.forEach((event, idx) => {
+			if (event.status === Status.Active) {
+				const next = this.events[idx+1] ?? {time: date.now()};
+				timeSpent += (next.time.getTime() - event.time.getTime()) / 1000;
+				if (date.sameDay(event.time, day) || date.sameDay(next.time, day)) {
 					const startOfDay = new Date(day);
 					startOfDay.setHours(0,0,0,0);
 					timeSpentToday += (
 						(date.sameDay(next.time, day) ?  next.time.getTime() : date.now().getTime()) -
-						(date.sameDay(session.time, day) ?  session.time.getTime() : startOfDay.getTime())
+						(date.sameDay(event.time, day) ?  event.time.getTime() : startOfDay.getTime())
 						) / 1000;
 				}
-				if (date.inSprint(session.time) || date.inSprint(next.time)) {
+				if (date.inSprint(event.time) || date.inSprint(next.time)) {
 					const startOfDay = new Date(day);
 					startOfDay.setHours(0,0,0,0);
 					timeSpentThisSprint += (
 						(date.inSprint(next.time) ?  next.time.getTime() : date.now().getTime()) -
-						(date.inSprint(session.time) ?  session.time.getTime() : startOfDay.getTime())
+						(date.inSprint(event.time) ?  event.time.getTime() : startOfDay.getTime())
 						) / 1000;
 				}
-
 			}
 		}, 0);
-		const first = this._sessions[0];
-		const last = this._sessions[this._sessions.length - 1];
+
+		return { timeSpent, timeSpentToday, timeSpentThisSprint };
+	}
+	// -- how are active to inactive to complete situations handled
+	toView(day: Date): ViewData {
+		let {timeSpent, timeSpentToday, timeSpentThisSprint} = this.getTimes(day);
+		const first = this.events[0];
+		const last = this.events[this.events.length - 1];
 		return {
 			id: this.id,
 			status: this.status,
@@ -97,35 +104,33 @@ export class Task {
 			timeSpentToday,
 			timeSpentThisSprint,
 			timeToClose: (!!last && last.status === Status.Complete) ? ((last.time.getTime() - first.time.getTime()) / 1000) : undefined,
-			numSwitches: this._sessions.filter(session => session.status === Status.Active).length,
+			numSwitches: this.events.filter(event => event.status === Status.Active).length,
 			fileName: this.path,
 			tags: this.tags,
 			line: this.line,
-			sessions: this._sessions
+			events: this.events
 		}
 	}
 
-	setSessions(sessions: Session[]) {
-		this._sessions = sessions;
+	setEvents(events: Event[]) {
+		this.events = events;
 		this.setLastActive();
+		({ timeSpent: this.timeSpent, timeSpentToday: this.timeSpentToday, timeSpentThisSprint: this.timeSpentThisSprint } = this.getTimes(new Date()));
 	}
-	addSession(session: Session) {
-		this._sessions.push(session);
+	addEvent(event: Event) {
+		this.events.push(event);
 		this.setLastActive();
 	}
 	setLastActive() {
-		const activeSessionTimes = this._sessions.filter(s => s.status === Status.Active).map(session => session.time.getTime());
-		this.lastActive = activeSessionTimes.length === 0 ? date.min : date.from(Math.max(...activeSessionTimes));
-	}
-	get sessions(): Session[] {
-		return this._sessions;
+		const activeEventTimes = this.events.filter(s => s.status === Status.Active).map(event => event.time.getTime());
+		this.lastActive = activeEventTimes.length === 0 ? date.min : date.from(Math.max(...activeEventTimes));
 	}
 	
 	async setStatus(status: Status) { 
 		if (this.status === status) return;	// do not add the same status as current status
 		const time = date.now();
 		await log.toConsoleAndFile(`changing status of task ${this.toLog()}\t\t${this.status !== undefined ? StatusWord[this.status] : "<blank>"} -> ${StatusWord[status]}`);
-		this.addSession({ time, status });
+		this.addEvent({ time, status });
 		this.status = status;
 		this.dirty = true;
 	}

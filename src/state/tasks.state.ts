@@ -9,6 +9,7 @@ import * as taskSource from 'service/task-source.service';
 import * as app from 'state/app.state';
 import * as settings from 'state/settings.state';
 import * as log from 'service/logging.service';
+import { Event } from 'model/event';
 
 let _fileListener: EventRef;
 let _tasks = new BehaviorSubject<Task[] | undefined>(undefined);
@@ -43,10 +44,10 @@ export const getMostRecent = async (): Promise<Task | undefined> => {
     let mostRecentTask: Task | undefined;
     let mostRecentTime = new Date(0);
     tasks.forEach(task => {
-        task.sessions.forEach(session => {
-            if (session.time > mostRecentTime) {
+        task.events.forEach(event => {
+            if (event.time > mostRecentTime) {
                 mostRecentTask = task;
-                mostRecentTime = session.time;
+                mostRecentTime = event.time;
             }
         });
     });
@@ -55,7 +56,9 @@ export const getMostRecent = async (): Promise<Task | undefined> => {
 export const getViewData = async (day = new Date(), filter ?: TaskFilter): Promise<ViewData[]> => {
     return (await get(filter)).map(task => task.toView(day));
 }
-
+export const getEvents = async (day = new Date(), filter ?: TaskFilter): Promise<Event[]> => {
+    return (await get(filter)).reduce((acc: Event[], task) => acc.concat(task.events.map()), []);
+}
 export const persist = async () => {
     const tasks = await refreshTaskSource(); 
     await taskSource.save(tasks);
@@ -100,7 +103,7 @@ const refreshTasks = async (): Promise<Task[]> => {
         log.toConsoleAndFile(`duplicate source tasks found: [${dupSources.join(", ")}]`);
     }
     // check that source and data counts match
-    log.toConsoleAndFile(`refreshTasks:\tdata: #tasks:${Object.keys(data).length} #sessions:${Object.keys(data).map((id: string) => data[parseInt(id)]).reduce((acc, cur) => acc + cur.sessions.length, 0)}\tsource: #tasks:${source.length}`);
+    log.toConsoleAndFile(`refreshTasks:\tdata: #tasks:${Object.keys(data).length} #events:${Object.keys(data).map((id: string) => data[parseInt(id)]).reduce((acc, cur) => acc + cur.events.length, 0)}\tsource: #tasks:${source.length}`);
     if (Object.keys(data).length != source.length) {
         // const sourceTaskText = source.map(s => new Task(s)).sort((a, b) => a.sourceID - b.sourceID).map(s => {
         //     const text = s.text.replaceAll(/'/g, "").replaceAll(/"/g, "").replaceAll(/`/g, "").replaceAll(/\[\[/g, "").replaceAll(/]]/g, "");
@@ -141,8 +144,8 @@ const refreshTasks = async (): Promise<Task[]> => {
         const matchingDataTask = data.find(dataTask => dataTask.id === task.sourceID);
         if (!!matchingDataTask) {
             task.id = matchingDataTask?.id;
-            task.setSessions(matchingDataTask.sessions);
-            task.status = task.sessions.last()?.status;
+            task.setEvents(matchingDataTask.events);
+            task.status = task.events.last()?.status;
         } else {
             // sources without data
             log.errorToConsoleAndFile(`source task has no data\t${task.toLog()}`);
@@ -191,9 +194,9 @@ const initialize = async (): Promise<Task[]> => {
 type TaskFilter = (task: Task) => boolean;
 
 export const isActive: TaskFilter = (task: Task): boolean => {
-    const mostRecentSession = task.sessions[task.sessions.length - 1];
-    if (!!mostRecentSession) {
-        if (mostRecentSession.status === Status.Active) {
+    const mostRecentEvent = task.events[task.events.length - 1];
+    if (!!mostRecentEvent) {
+        if (mostRecentEvent.status === Status.Active) {
             return true;
         }
     }

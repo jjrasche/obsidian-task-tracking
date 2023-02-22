@@ -1,11 +1,11 @@
-import { Session } from "../model/session";
 import * as file from 'service/file.service';
 import * as settings from 'state/settings.state';
 import * as log from 'service/logging.service';
 import { Task } from "model/task.model";
+import { Event } from 'model/event';
 
-export type TaskDataType = {[key: string]: Session[]};
-export type TaskData = {id: number, sessions: Session[]};
+export type TaskDataType = {[key: string]: Event[]};
+export type TaskData = {id: number, events: Event[]};
 let _taskData: TaskDataType | undefined;
 
 export const get = async (): Promise<TaskDataType> => {
@@ -19,7 +19,7 @@ export const get = async (): Promise<TaskDataType> => {
         await file.write(settings.get().taskDataFileName, fileContent);
     }
     const newData: TaskDataType = JSON.parse(fileContent);
-    Object.keys(newData).forEach(id => newData[id].forEach(session => session.time = new Date(session.time)))
+    Object.keys(newData).forEach(id => newData[id].forEach(event => event.time = new Date(event.time)))
     _taskData = newData;
     return newData;
 }
@@ -27,7 +27,7 @@ export const reset = () => _taskData = undefined;
 
 export const getArray = async (): Promise<TaskData[]> => {
     const taskData = await get();
-    return Object.keys(taskData).map(key => ({id: parseInt(key), sessions: taskData[key]}));
+    return Object.keys(taskData).map(key => ({id: parseInt(key), events: taskData[key]}));
 }
 export const save = async (tasks: Task[]) => {
     let taskData: TaskDataType = {};
@@ -38,7 +38,7 @@ export const save = async (tasks: Task[]) => {
             throw new Error(`was about to save an undefined task:${task.toLog()}`);
             return;
         }
-        taskData[task.id] = task.sessions
+        taskData[task.id] = task.events
     });
     // check to not delete task data key
     reset()

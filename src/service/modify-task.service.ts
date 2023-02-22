@@ -25,7 +25,7 @@ export const updateTaskFromClick = async (id: number)  => {
 }
 
 export const changeTaskStatus = async (task: Task, status: Status) => {
-    if (task.sessions.last()?.status === status) return; // do not add the same status as current status
+    if (task.events.last()?.status === status) return; // do not add the same status as current status
     if (settings.get().onlyOneTaskActive && status === Status.Active) {
         await inactivateAllActiveTasks();
     }

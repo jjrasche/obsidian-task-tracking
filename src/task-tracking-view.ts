@@ -1,8 +1,8 @@
 import { App, ItemView, MarkdownRenderChild, WorkspaceLeaf } from "obsidian";
 import { DataviewApi, getAPI, STask } from "obsidian-dataview";
-import * as React from "react";
-import * as ReactDOM from "react-dom";
-import { createRoot, Root } from 'react-dom/client';
+	import * as React from "react";
+	import * as ReactDOM from "react-dom";
+	import { createRoot, Root } from 'react-dom/client';
 
 import{ TaskTableView } from "./component/task-tracking-view";
 import * as settings from 'state/settings.state';

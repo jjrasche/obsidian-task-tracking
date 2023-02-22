@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 export interface AutoCompleteItem {
 	display: string;
 	key: number;
+	lastUpdated: Date;
 };
 
 export function AutoComplete({items, onSelectCallback}: {items: AutoCompleteItem[], onSelectCallback: (id: number) => void}): JSX.Element {
