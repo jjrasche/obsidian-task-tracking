@@ -34,16 +34,22 @@ export default class TaskTrackingPlugin extends Plugin {
 		wait.until(() => dv.ready(), this.setup, 200);
 	}
 
-	getTaskTimeByFile = async (file: TFile | null): Promise<string> => {
+	getTaskTimeByFile = async (file: TFile | null): Promise<{time: string, lastActive: Date} | null> => {
 		if (!file) {
 			file = this.app.workspace.getActiveFile();
 		}
 		if (file == null) {
-			return "0";
+			return null;
 		}
-		const tasks = await taskState.get();
-		const seconds = tasks.filter(t => t.path == file?.path).reduce((acc, t) => acc + t.getTimes().timeSpent, 0);
-		return (seconds / 3600).toFixed(2)
+		const tasks = (await taskState.get()).filter(t => t.path == file?.path);
+		const seconds = tasks.reduce((acc, t) => acc + t.getTimes().timeSpent, 0);
+		const lastActive = tasks.reduce((acc, t) => {
+			if (!!t.lastActive && t.lastActive > acc) {
+				return t.lastActive;
+			}
+			return acc;
+		}, new Date(-8640000000000000))
+		return { time: (seconds / 3600).toFixed(2), lastActive };
 	}
 
 	setup = async () => {
