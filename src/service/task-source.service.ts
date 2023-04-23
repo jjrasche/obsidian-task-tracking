@@ -32,7 +32,7 @@ export const save = async (tasks: Task[]) => {
         // mark task and wait for dataview to update its task list to prevent race conditions of altering source prior to task objects updating
         task.dirty = false;
         task.saved = true;
-        sourceUpdateWaits.push(wait.until(() => dv.taskInDv(task.id), () => {}, 200));
+        sourceUpdateWaits.push(wait.until(() => dv.taskInDv(task.id), () => {}, 500));
         await log.toConsoleAndFile(`updated task source: ${task.toLog()}\tfrom:'${originalLine}'\tupdated:${newLine}`);
     };
     await Promise.all(sourceUpdateWaits);
@@ -40,7 +40,7 @@ export const save = async (tasks: Task[]) => {
 
 // use to wipe out all managed tasks in source files
 export const nukeAllIdsOnSourceTasks = async () => {
-    const tasks = get().map(st => {
+    const tasks = get().map(st => { 
         let task = new Task(st)
         task.status = undefined;
         return task;

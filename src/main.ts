@@ -6,12 +6,10 @@ import { updateTaskFromEditor } from 'service/modify-task.service';
 import * as app from 'state/app.state';
 import * as settings from 'state/settings.state';
 import * as statusBar from 'service/status-bar.service';
-import * as taskSource from 'service/task-source.service';
 import * as dv from 'service/data-view.service';
 import * as wait from 'service/wait.service';
 import { TaskToggleModal } from 'task-toggle-modal';
 import * as taskState from 'state/tasks.state';
-import { SecondsToFractionalHours, SecondsToTime } from 'component/task-tracking-view';
 
 
 // due to limitations of obsidian adding icons, I must use icon swapper and inject new svgs to get icons I want
@@ -31,14 +29,14 @@ export default class TaskTrackingPlugin extends Plugin {
 			: ".obsidian/plugins/obsidian-activity-tracking/log(computer).txt"
 		settings.set(Object.assign({}, { ...DEFAULT_SETTINGS, logFileName: logFile }, await this.loadData()));
 		statusBar.set(this.addStatusBarItem());
-		wait.until(() => dv.ready(), this.setup, 200);
+		wait.until(() => dv.ready(), this.setup, 500);
 	}
 
 	getTaskTimeByFile = async (file: TFile | null): Promise<{time: string, lastActive: Date} | null> => {
 		if (!file) {
 			file = this.app.workspace.getActiveFile();
 		}
-		if (file == null) {
+		if (file == null) {	
 			return null;
 		}
 		const tasks = (await taskState.get()).filter(t => t.path == file?.path);
